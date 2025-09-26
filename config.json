@@ -1,7 +1,7 @@
 {
     "database": {
         "server": "infosever.thaiddns.com",
-        "port": "1461",
+        "port": "14369",
         "database": "pos",
         "username": "info",
         "password": "info123",

@@ -404,11 +404,11 @@ class ConfigUI:
     def design_template(self, template_type):
         """เปิดหน้าออกแบบฟอร์ม"""
         try:
-            from form_designer import FormDesigner
-            FormDesigner(self.window, template_type)
+            from form_designer import ProfessionalFormDesigner
+            ProfessionalFormDesigner(self.window, template_type)
         except ImportError:
-            messagebox.showerror("ข้อผิดพลาด", "ไม่พบไฟล์ form_designer.py")
-        
+            messagebox.showerror("ข้อผิดพลาด", "ไม่พบไฟล์ professional_form_designer.py")
+            
     def upload_template(self, template_type):
         """อัพโหลดไฟล์ template"""
         from tkinter import filedialog
