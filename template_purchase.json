@@ -1,0 +1,22 @@
+{
+    "type": "purchase",
+    "paper_size": "A4",
+    "dimensions": {
+        "width_mm": 210,
+        "height_mm": 297,
+        "width_px": 595,
+        "height_px": 842
+    },
+    "elements": [
+        {
+            "type": "field",
+            "section": "header",
+            "field_type": "company_name",
+            "x": 77,
+            "y": 77,
+            "text": "[ชื่อบริษัท]",
+            "font_size": 12,
+            "color": "blue"
+        }
+    ]
+}
