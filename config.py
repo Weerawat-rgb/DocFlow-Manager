@@ -124,11 +124,12 @@ class ConfigUI:
         # Database tab
         self.create_database_tab()
         
-        # Company tab  
-        self.create_company_tab()
-        
         # Template tab  
         self.create_template_tab()
+        
+        # # Company tab  
+        # self.create_company_tab()
+        
         
         # Simple buttons
         button_frame = tk.Frame(main_frame, bg='#f8fafc')
@@ -220,14 +221,14 @@ class ConfigUI:
             canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
     
-    def create_company_tab(self):
-        company_frame = ttk.Frame(self.notebook)
-        self.notebook.add(company_frame, text='ข้อมูลบริษัท')
+       # def create_company_tab(self):
+        # company_frame = ttk.Frame(self.notebook)
+        # self.notebook.add(company_frame, text='ข้อมูลบริษัท')
         
         # Simple scrollable content
-        canvas = tk.Canvas(company_frame, bg='white', highlightthickness=0)
-        scrollbar = ttk.Scrollbar(company_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas, bg='white')
+        # canvas = tk.Canvas(company_frame, bg='white', highlightthickness=0)
+        # scrollbar = ttk.Scrollbar(company_frame, orient="vertical", command=canvas.yview)
+        # scrollable_frame = tk.Frame(canvas, bg='white')
         
         scrollable_frame.bind(
             "<Configure>",
@@ -241,27 +242,27 @@ class ConfigUI:
         content.pack(fill='both', expand=True)
         
         # Simple title
-        tk.Label(content, text="ข้อมูลบริษัท",
-                font=('Segoe UI', 16, 'bold'),
-                fg='#374151', bg='white').pack(anchor='w', pady=(0, 20))
+        # tk.Label(content, text="ข้อมูลบริษัท",
+        #         font=('Segoe UI', 16, 'bold'),
+        #         fg='#374151', bg='white').pack(anchor='w', pady=(0, 20))
         
         # Company fields
-        self.company_fields = {}
+        # self.company_fields = {}
         
-        self.create_simple_field(content, "ชื่อบริษัท:", "company_name", 
-                                self.config["application"]["company_name"])
+        # self.create_simple_field(content, "ชื่อบริษัท:", "company_name", 
+        #                         self.config["application"]["company_name"])
         
-        self.create_simple_field(content, "ที่อยู่:", "company_address", 
-                                self.config["application"]["company_address"], height=3)
+        # self.create_simple_field(content, "ที่อยู่:", "company_address", 
+        #                         self.config["application"]["company_address"], height=3)
         
-        self.create_simple_field(content, "เบอร์โทร:", "company_phone", 
-                                self.config["application"]["company_phone"])
+        # self.create_simple_field(content, "เบอร์โทร:", "company_phone", 
+        #                         self.config["application"]["company_phone"])
         
-        self.create_simple_field(content, "อีเมล:", "company_email", 
-                                self.config["application"]["company_email"])
+        # self.create_simple_field(content, "อีเมล:", "company_email", 
+        #                         self.config["application"]["company_email"])
         
-        self.create_simple_field(content, "เลขประจำตัวผู้เสียภาษี:", "tax_id", 
-                                self.config["application"]["tax_id"])
+        # self.create_simple_field(content, "เลขประจำตัวผู้เสียภาษี:", "tax_id", 
+        #                         self.config["application"]["tax_id"])
         
         # Pack canvas and scrollbar
         canvas.pack(side="left", fill="both", expand=True)
@@ -369,29 +370,28 @@ class ConfigUI:
         # Template fields
         self.template_fields = {}
         
-        self.create_simple_field(content, "ชื่อเทมเพลทใบวางบิลซื้อ:", "purchase_template", 
-                                self.config.get("templates", {}).get("purchase_template", "ใบวางบิลซื้อ"),
-                                buttons=[
-                                    ("ออกแบบ", lambda: self.design_template("purchase")),
-                                    ("อัพโหลด", lambda: self.upload_template("purchase"))
-                                ])
-        
         self.create_simple_field(content, "ชื่อเทมเพลทใบวางบิลขาย:", "sales_template", 
                                 self.config.get("templates", {}).get("sales_template", "ใบวางบิลขาย"),
                                 buttons=[
-                                    ("ออกแบบ", lambda: self.design_template("sales")),
-                                    ("อัพโหลด", lambda: self.upload_template("sales"))
+                                    ("ดูตัวอย่าง", self.preview_billing_note)
                                 ])
         
-        self.create_simple_field(content, "ชื่อเทมเพลทใบวางบิลสาขา:", "branch_template", 
-                                self.config.get("templates", {}).get("branch_template", "ใบวางบิลสาขา"),
-                                buttons=[
-                                    ("ออกแบบ", lambda: self.design_template("branch")),
-                                    ("อัพโหลด", lambda: self.upload_template("branch"))
-                                ])
+        # self.create_simple_field(content, "ชื่อเทมเพลทใบวางบิลซื้อ:", "purchase_template", 
+        #                         self.config.get("templates", {}).get("purchase_template", "ใบวางบิลซื้อ"),
+        #                         buttons=[
+        #                             ("ออกแบบ", lambda: self.design_template("purchase"))
+        #                         ])
         
-        self.create_simple_field(content, "หมายเหตุเพิ่มเติม:", "template_notes", 
-                                self.config.get("templates", {}).get("template_notes", ""), height=3)        
+        
+        # self.create_simple_field(content, "ชื่อเทมเพลทใบวางบิลสาขา:", "branch_template", 
+        #                         self.config.get("templates", {}).get("branch_template", "ใบวางบิลสาขา"),
+        #                         buttons=[
+        #                             ("ออกแบบ", lambda: self.design_template("branch")),
+        #                             ("อัพโหลด", lambda: self.upload_template("branch"))
+        #                         ])
+        
+        # self.create_simple_field(content, "หมายเหตุเพิ่มเติม:", "template_notes", 
+        #                         self.config.get("templates", {}).get("template_notes", ""), height=3)        
         # Pack canvas and scrollbar
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
@@ -401,15 +401,15 @@ class ConfigUI:
             canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
         
-    def design_template(self, template_type):
-        """เปิดหน้าออกแบบฟอร์ม"""
-        try:
-            from form_designer import ProfessionalFormDesigner
-            ProfessionalFormDesigner(self.window, template_type)
-        except ImportError:
-            messagebox.showerror("ข้อผิดพลาด", "ไม่พบไฟล์ professional_form_designer.py")
-            
-    def upload_template(self, template_type):
+    def preview_billing_note(self):
+        """แสดงตัวอย่างใบวางบิล"""
+        from billing_note_generator import BillingNoteGenerator
+        BillingNoteGenerator.Preview_Template()
+
+        # # แล้วเปลี่ยน lambda เป็น:
+        # ("ดูตัวอย่าง", self.preview_billing_note)
+                
+    # def upload_template(self, template_type):
         """อัพโหลดไฟล์ template"""
         from tkinter import filedialog
         
