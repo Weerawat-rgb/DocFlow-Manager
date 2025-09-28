@@ -55,6 +55,7 @@ class SalesBillDatabase:
                 INNER JOIN InvoiceItem it ON it.InvoiceId = iv.InvoiceId
                 INNER JOIN Customer c ON c.CustomerId = iv.CustomerId
                 WHERE it.UnpaidAmount > 0
+                AND iv.Status NOT IN (1, 99)
                 AND (
                     ISNULL(c.Acct, '') LIKE ?
                     OR ISNULL(c.PhoneMobile, '') LIKE ?
@@ -75,6 +76,7 @@ class SalesBillDatabase:
                 INNER JOIN InvoiceItem it ON it.InvoiceId = iv.InvoiceId
                 INNER JOIN Customer c ON c.CustomerId = iv.CustomerId
                 WHERE it.UnpaidAmount > 0
+                AND iv.Status NOT IN (1, 99)
                 GROUP BY c.CustomerId, c.Acct, c.FirstName, c.LastName
                 ORDER BY c.CustomerId
                 """
@@ -127,6 +129,7 @@ class SalesBillDatabase:
             INNER JOIN Customer c ON c.CustomerId = iv.CustomerId
             WHERE c.CustomerId = ?
             AND it.UnpaidAmount > 0
+            AND iv.Status NOT IN (1, 99)
             ORDER BY iv.InvoiceDate DESC
             """
             
@@ -144,7 +147,7 @@ class SalesBillDatabase:
         except Exception as e:
             print(f"❌ ข้อผิดพลาดในการดึงใบแจ้งหนี้: {str(e)}")
             return []
-        
+
     def get_customer_invoices_for_display(self, search_term: str = "") -> List[Dict]:
         """ดึงข้อมูลลูกค้าพร้อมใบแจ้งหนี้สำหรับแสดงในตาราง"""
         try:
@@ -171,6 +174,7 @@ class SalesBillDatabase:
                 INNER JOIN InvoiceItem it ON it.InvoiceId = iv.InvoiceId
                 INNER JOIN Customer c ON c.CustomerId = iv.CustomerId
                 WHERE it.UnpaidAmount > 0
+                AND iv.Status NOT IN (1, 99)
                 AND (
                     ISNULL(c.Acct, '') LIKE ?
                     OR ISNULL(c.PhoneMobile, '') LIKE ?
@@ -203,6 +207,7 @@ class SalesBillDatabase:
                 INNER JOIN InvoiceItem it ON it.InvoiceId = iv.InvoiceId
                 INNER JOIN Customer c ON c.CustomerId = iv.CustomerId
                 WHERE it.UnpaidAmount > 0
+                AND iv.Status NOT IN (1, 99)
                 ORDER BY c.CustomerId, iv.InvoiceDate
                 """
                 cursor.execute(query)
@@ -220,7 +225,7 @@ class SalesBillDatabase:
         except Exception as e:
             print(f"❌ ข้อผิดพลาดในการดึงข้อมูลสำหรับแสดงผล: {str(e)}")
             return []
-    
+            
     def get_invoice_details(self, invoice_number: str) -> Dict:
         """ดึงรายละเอียดใบแจ้งหนี้"""
         try:
@@ -256,6 +261,49 @@ class SalesBillDatabase:
             
         except Exception as e:
             print(f"❌ ข้อผิดพลาดในการดึงรายละเอียดใบแจ้งหนี้: {str(e)}")
+            return {}
+        
+    def get_customer_detail(self, customer_id: int) -> Dict:
+        """ดึงข้อมูลลูกค้าแบบละเอียดพร้อมที่อยู่"""
+        try:
+            cursor = self.connection.cursor()
+            
+            query = """
+            SELECT 
+                c.Acct,
+                c.FirstName + c.LastName AS [Name],
+                c.Address+' '+
+                CASE 
+                    WHEN c.state != 1 THEN 
+                        'ต.' + d.district_name + ' ' + 
+                        'อ.' + a.amphur_name + ' ' + 
+                        'จ.' + p.province_name + ' '+
+                        c.ZipCode
+                    ELSE 
+                        d.district_name + ' ' + 
+                        a.amphur_name + ' ' + 
+                        p.province_name + ' '+
+                        c.ZipCode
+                END AS full_address,
+                c.PhoneMobile
+            FROM Customer c
+            LEFT JOIN Amphur a ON a.amphur_id = c.City
+            LEFT JOIN Province p ON p.province_id = c.State
+            LEFT JOIN District d ON d.district_id = c.SubDistrict
+            WHERE c.CustomerId = ?
+            """
+            
+            cursor.execute(query, (customer_id,))
+            row = cursor.fetchone()
+            
+            if row:
+                columns = [desc[0] for desc in cursor.description]
+                return dict(zip(columns, row))
+            
+            return {}
+            
+        except Exception as e:
+            print(f"Error getting customer detail: {str(e)}")
             return {}
     
     def create_billing_document(self, customer_id: int, invoice_numbers: List[str], 

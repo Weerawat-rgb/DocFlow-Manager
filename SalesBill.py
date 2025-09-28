@@ -212,49 +212,49 @@ class SalesBillUI:
         self.clear_content()
         
         content = tk.Frame(self.window, bg='#f8fafc')
-        content.pack(fill='both', expand=True, padx=30, pady=20)
+        content.pack(fill='both', expand=True, padx=20, pady=10)  # ลด padding
         content._content = True
         
-        card = tk.Frame(content, bg='white', padx=40, pady=40)
+        card = tk.Frame(content, bg='white', padx=20, pady=20)  # ลด padding
         card.pack(expand=True, fill='both')
         
-        tk.Label(card, text="🔍 ค้นหาลูกค้า",
-                font=('Segoe UI', 20, 'bold'),
-                fg='#1f2937', bg='white').pack(pady=(0, 10))
+        # Title - เล็กลง
+        tk.Label(card, text="ค้นหาลูกค้า",
+                font=('Segoe UI', 16, 'bold'),  # ลดขนาด
+                fg='#1f2937', bg='white').pack(pady=(0, 5))
         
-        tk.Label(card, text="ป้อนชื่อบริษัทหรือเลขประจำตัวผู้เสียภาษีเพื่อค้นหาลูกค้า",
-                font=('Segoe UI', 12),
-                fg='#6b7280', bg='white').pack(pady=(0, 30))
+        tk.Label(card, text="ป้อนชื่อบริษัทหรือเลขประจำตัวผู้เสียภาษี",
+                font=('Segoe UI', 10),  # ลดขนาด
+                fg='#6b7280', bg='white').pack(pady=(0, 15))
         
-        # Search section
+        # Search section - กะทัดรัด
         search_frame = tk.Frame(card, bg='white')
-        search_frame.pack(fill='x', pady=(0, 30))
+        search_frame.pack(fill='x', pady=(0, 15))
         
         search_container = tk.Frame(search_frame, bg='#f9fafb', relief='solid', bd=1)
         search_container.pack(fill='x')
         
-        self.search_entry = tk.Entry(search_container, font=('Segoe UI', 12),
+        self.search_entry = tk.Entry(search_container, font=('Segoe UI', 11),
                                     bg='#f9fafb', fg='#374151',
                                     border=0, insertbackground='#10b981')
-        self.search_entry.pack(side='left', fill='x', expand=True, padx=15, pady=12)
+        self.search_entry.pack(side='left', fill='x', expand=True, padx=10, pady=8)
         self.search_entry.bind('<KeyRelease>', self.search_customers)
         self.search_entry.bind('<Return>', self.search_customers)
         
-        search_btn = tk.Button(search_container, text="🔍",
-                              font=('Segoe UI', 12),
-                              bg='#10b981', fg='white',
-                              border=0, padx=15,
-                              cursor='hand2',
-                              command=self.search_customers)
+        search_btn = tk.Button(search_container, text="ค้นหา",
+                            font=('Segoe UI', 10),
+                            bg='#10b981', fg='white',
+                            border=0, padx=12,
+                            cursor='hand2',
+                            command=self.search_customers)
         search_btn.pack(side='right', fill='y')
         
         # Results frame
         self.results_frame = tk.Frame(card, bg='white')
         self.results_frame.pack(fill='both', expand=True)
         
-        # Load initial customers
         self.search_customers()
-    
+            
     def search_customers(self, event=None):
         search_term = self.search_entry.get().strip()
         
@@ -404,49 +404,66 @@ class SalesBillUI:
         print(f"🔍 Scrollable frame has {children_count} children")  
               
     def create_customer_card(self, parent, customer):
-        print(f"🔨 Creating card for customer: {customer}")
+        card = tk.Frame(parent, bg='#f8fafc', relief='solid', bd=1, padx=15, pady=8)
+        card.pack(fill='x', pady=3)  # ลด spacing
         
-        # Simple card container
-        card = tk.Frame(parent, bg='#f8fafc', relief='ridge', bd=2, padx=15, pady=10)
-        card.pack(fill='x', pady=5)
+        # Header row
+        header_frame = tk.Frame(card, bg='#f8fafc')
+        header_frame.pack(fill='x')
         
         # Customer info
-        customer_id = customer.get('CustomerId', 'N/A')
+        customer_id = customer.get('CustomerId', '')
         customer_name = customer.get('Name', '').strip()
         acct = customer.get('Acct', '').strip()
         
-        # Display name
-        if customer_name:
-            display_name = customer_name
-        else:
-            display_name = f"ลูกค้า ID: {customer_id}"
+        display_name = customer_name if customer_name else f"ลูกค้า ID: {customer_id}"
         
-        # Name label
-        name_label = tk.Label(card, text=display_name,
-                            font=('Segoe UI', 12, 'bold'),
-                            fg='#1f2937', bg='#f8fafc')
-        name_label.pack(anchor='w')
+        # Left side
+        info_frame = tk.Frame(header_frame, bg='#f8fafc')
+        info_frame.pack(side='left', fill='x', expand=True)
         
-        # Details
-        details = f"รหัสลูกค้า: {customer_id}"
+        tk.Label(info_frame, text=display_name,
+                font=('Segoe UI', 12, 'bold'),  # ลดขนาด
+                fg='#1f2937', bg='#f8fafc').pack(anchor='w')
+        
+        details = f"ID: {customer_id}"
         if acct:
             details += f" | บัญชี: {acct}"
         
-        details_label = tk.Label(card, text=details,
-                            font=('Segoe UI', 9),
-                            fg='#6b7280', bg='#f8fafc')
-        details_label.pack(anchor='w', pady=(2, 10))
+        tk.Label(info_frame, text=details,
+                font=('Segoe UI', 9),
+                fg='#6b7280', bg='#f8fafc').pack(anchor='w')
         
-        # Select button
-        select_btn = tk.Button(card, text="เลือกลูกค้า",
+        # Right side - ปุ่มเล็กลง
+        select_btn = tk.Button(header_frame, text="เลือก",
                             font=('Segoe UI', 10, 'bold'),
                             bg='#10b981', fg='white',
-                            padx=20, pady=5,
+                            border=0, padx=15, pady=6,
+                            cursor='hand2',
                             command=lambda: self.select_customer(customer))
-        select_btn.pack(anchor='w')
+        select_btn.pack(side='right')
         
-        print(f"✅ Card created and packed for customer {customer_id}")        
+        # Hover effects
+        def on_enter(event):
+            card.config(bg='#f0f9ff', bd=2)
+            info_frame.config(bg='#f0f9ff')
+            header_frame.config(bg='#f0f9ff')
+            for widget in info_frame.winfo_children():
+                if widget.winfo_class() == 'Label':
+                    widget.config(bg='#f0f9ff')
         
+        def on_leave(event):
+            card.config(bg='#f8fafc', bd=1)
+            info_frame.config(bg='#f8fafc')
+            header_frame.config(bg='#f8fafc')
+            for widget in info_frame.winfo_children():
+                if widget.winfo_class() == 'Label':
+                    widget.config(bg='#f8fafc')
+        
+        card.bind("<Enter>", on_enter)
+        card.bind("<Leave>", on_leave)
+        card.bind("<Button-1>", lambda e: self.select_customer(customer))
+                
     def load_customer_invoices_for_display(self):
         """โหลดข้อมูลจากฐานข้อมูลผ่าน database class"""
         try:
@@ -526,38 +543,24 @@ class SalesBillUI:
         self.clear_content()
         
         content = tk.Frame(self.window, bg='#f8fafc')
-        content.pack(fill='both', expand=True, padx=30, pady=20)
+        content.pack(fill='both', expand=True, padx=20, pady=10)
         content._content = True
         
-        card = tk.Frame(content, bg='white', padx=40, pady=40)
+        card = tk.Frame(content, bg='white', padx=20, pady=15)
         card.pack(expand=True, fill='both')
         
-        # Title
-        title_frame = tk.Frame(card, bg='white')
-        title_frame.pack(fill='x', pady=(0, 30))
-        
+        # Title - เล็กลง
         customer_name = self.selected_customer.get('Name', '').strip()
         if not customer_name:
             customer_name = f"ลูกค้า ID: {self.selected_customer.get('CustomerId', 'N/A')}"
         
-        tk.Label(title_frame, text=f"ใบแจ้งหนี้ของ {customer_name}",
-                font=('Segoe UI', 18, 'bold'),
-                fg='#1f2937', bg='white').pack(anchor='w')
+        tk.Label(card, text=f"ใบแจ้งหนี้ของ {customer_name}",
+                font=('Segoe UI', 14, 'bold'),  # ลดขนาด
+                fg='#1f2937', bg='white').pack(anchor='w', pady=(0, 10))
         
-        tk.Label(title_frame, text="เลือกใบแจ้งหนี้ที่ต้องการรวมในใบวางบิล",
-                font=('Segoe UI', 12),
-                fg='#6b7280', bg='white').pack(anchor='w', pady=(5, 0))
-        
-        # Debug: แสดงรายการที่เลือกไว้
-        if hasattr(self, 'selected_invoice_numbers'):
-            print(f"Returning to step 3 with selected: {self.selected_invoice_numbers}")
-        else:
-            print("No selected_invoice_numbers found")
-            self.selected_invoice_numbers = set()
-        
-        # Load invoices for this customer
+        # Load invoices
         self.load_customer_invoices()
-                
+                        
     def load_customer_invoices(self):
         try:
             customer_id = self.selected_customer.get('CustomerId')
@@ -589,20 +592,20 @@ class SalesBillUI:
         tree_frame = tk.Frame(card, bg='white')
         tree_frame.pack(fill='both', expand=True, pady=(0, 20))
         
-        # Create Treeview with custom style
+        # Create Treeview with consistent style
         style = ttk.Style()
-        style.configure("Custom.Treeview", 
-                    font=('Segoe UI', 11),
-                    rowheight=30)
-        style.configure("Custom.Treeview.Heading", 
-                    font=('Segoe UI', 12, 'bold'))
+        style.configure("Invoice.Treeview", 
+                    font=('Segoe UI', 10),  # ฟอนต์เท่ากับ Step 4
+                    rowheight=25)
+        style.configure("Invoice.Treeview.Heading", 
+                    font=('Segoe UI', 11, 'bold'))
         
         columns = ('Select', 'InvoiceNumber', 'InvoiceDate', 'MaxDueDate', 'DueDate', 'UnpaidAmount')
         
         self.invoice_tree = ttk.Treeview(tree_frame, columns=columns, show='headings', 
-                                        height=10, style="Custom.Treeview")
+                                        height=12, style="Invoice.Treeview")  # เพิ่มความสูง
         
-        # Define headings and column widths
+        # Configure columns
         column_config = {
             'Select': {'text': 'เลือกรายการ', 'width': 30, 'anchor': 'center'},
             'InvoiceNumber': {'text': 'เลขที่ใบแจ้งหนี้', 'width': 150, 'anchor': 'center'},
@@ -610,8 +613,8 @@ class SalesBillUI:
             'MaxDueDate': {'text': 'ระยะเวลาชำระ (วัน)', 'width': 100, 'anchor': 'center'},
             'DueDate': {'text': 'วันครบกำหนด', 'width': 120, 'anchor': 'center'},
             'UnpaidAmount': {'text': 'ยอดค้างชำระ (บาท)', 'width': 150, 'anchor': 'center'}
-        }
-        
+        }        
+            
         # Configure columns with center alignment
         for col in columns:
             self.invoice_tree.heading(col, text=column_config[col]['text'], anchor='center')
@@ -924,77 +927,163 @@ class SalesBillUI:
     def show_step4(self):
         self.current_step = 4
         self.create_step_indicator()
-        
-        # อัพเดท selected_invoice_numbers ให้เป็นปัจจุบัน
         self.sync_selected_invoices()
         self.clear_content()
         
-        # บันทึกรายการที่เลือกไว้ก่อนไป step 4
-        self.save_selected_invoices()
-        
         content = tk.Frame(self.window, bg='#f8fafc')
-        content.pack(fill='both', expand=True, padx=30, pady=20)
+        content.pack(fill='both', expand=True, padx=20, pady=10)
         content._content = True
         
-        card = tk.Frame(content, bg='white', padx=40, pady=40)
+        card = tk.Frame(content, bg='white', padx=20, pady=15)
         card.pack(expand=True, fill='both')
         
         # Title
-        tk.Label(card, text="✅ ตรวจสอบและยืนยันข้อมูล",
-                font=('Segoe UI', 20, 'bold'),
-                fg='#1f2937', bg='white').pack(pady=(0, 30))
+        tk.Label(card, text="ตรวจสอบและยืนยัน",
+                font=('Segoe UI', 16, 'bold'),
+                fg='#1f2937', bg='white').pack(pady=(0, 15))
         
-        # Summary frame
-        summary_frame = tk.Frame(card, bg='#f0f9ff', padx=30, pady=20, relief='solid', bd=1)
-        summary_frame.pack(fill='x', pady=(0, 30))
+        # Customer info - กะทัดรัด
+        customer_detail = self.get_customer_detail()
         
-        # Customer info
-        tk.Label(summary_frame, text="👤 ข้อมูลลูกค้า",
-                font=('Segoe UI', 14, 'bold'),
-                fg='#1f2937', bg='#f0f9ff').pack(anchor='w', pady=(0, 10))
+        customer_frame = tk.Frame(card, bg='#f0f9ff', padx=15, pady=8, relief='solid', bd=1)
+        customer_frame.pack(fill='x', pady=(0, 15))
         
-        tk.Label(summary_frame, text=f"บริษัท: {self.selected_customer.get('CustomerName', 'N/A')}",
-                font=('Segoe UI', 11),
-                fg='#374151', bg='#f0f9ff').pack(anchor='w')
+        tk.Label(customer_frame, text="ข้อมูลลูกค้า",
+                font=('Segoe UI', 12, 'bold'),
+                fg='#1f2937', bg='#f0f9ff').pack(anchor='w', pady=(0, 3))
         
-        tk.Label(summary_frame, text=f"เลขประจำตัวผู้เสียภาษี: {self.selected_customer.get('CustomerTaxNum', 'N/A')}",
-                font=('Segoe UI', 11),
-                fg='#374151', bg='#f0f9ff').pack(anchor='w')
+        if customer_detail:
+            info_text = f"ชื่อ: {customer_detail.get('Name', '')} | โทร: {customer_detail.get('PhoneMobile', '')} | ที่อยู่: {customer_detail.get('full_address', '')}"
+            tk.Label(customer_frame, text=info_text,
+                    font=('Segoe UI', 9),
+                    fg='#374151', bg='#f0f9ff',
+                    wraplength=1000).pack(anchor='w')
         
-        # Invoices info
-        tk.Label(summary_frame, text="📋 ใบแจ้งหนี้ที่เลือก",
-                font=('Segoe UI', 14, 'bold'),
-                fg='#1f2937', bg='#f0f9ff').pack(anchor='w', pady=(20, 10))
+        # Invoice table header
+        tk.Label(card, text="รายการใบแจ้งหนี้ที่เลือก",
+                font=('Segoe UI', 12, 'bold'),
+                fg='#1f2937', bg='white').pack(anchor='w', pady=(0, 5))
         
-        for invoice_no in self.selected_invoices:
-            tk.Label(summary_frame, text=f"• {invoice_no}",
-                    font=('Segoe UI', 11),
-                    fg='#374151', bg='#f0f9ff').pack(anchor='w')
+        # Table frame - ใช้พื้นที่เต็มที่
+        tree_frame = tk.Frame(card, bg='white')
+        tree_frame.pack(fill='both', expand=True, pady=(0, 15))
         
-        tk.Label(summary_frame, text=f"รวม {len(self.selected_invoices)} รายการ",
+        # Treeview with same style as Step 3
+        style = ttk.Style()
+        style.configure("Summary.Treeview", 
+                    font=('Segoe UI', 10),
+                    rowheight=25)
+        style.configure("Summary.Treeview.Heading", 
+                    font=('Segoe UI', 11, 'bold'))
+        
+        columns = ('No', 'InvoiceNumber', 'InvoiceDate', 'MaxDueDate', 'DueDate', 'UnpaidAmount')
+        
+        summary_tree = ttk.Treeview(tree_frame, columns=columns, show='headings', 
+                                style="Summary.Treeview")
+        
+        # Configure columns
+        column_config = {
+            'No': {'text': 'ลำดับที่', 'width': 60, 'anchor': 'center'},
+            'InvoiceNumber': {'text': 'เลขที่ใบแจ้งหนี้', 'width': 150, 'anchor': 'center'},
+            'InvoiceDate': {'text': 'วันที่ออกใบแจ้งหนี้', 'width': 120, 'anchor': 'center'},
+            'MaxDueDate': {'text': 'ระยะเวลาชำระ (วัน)', 'width': 100, 'anchor': 'center'},
+            'DueDate': {'text': 'วันครบกำหนด', 'width': 120, 'anchor': 'center'},
+            'UnpaidAmount': {'text': 'ยอดค้างชำระ (บาท)', 'width': 150, 'anchor': 'center'}
+        }
+        
+        for col in columns:
+            summary_tree.heading(col, text=column_config[col]['text'], anchor='center')
+            summary_tree.column(col, 
+                            width=column_config[col]['width'], 
+                            minwidth=50,
+                            anchor=column_config[col]['anchor'])
+        
+        # Add scrollbar
+        scrollbar = ttk.Scrollbar(tree_frame, orient='vertical', command=summary_tree.yview)
+        summary_tree.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack treeview and scrollbar
+        summary_tree.pack(side='left', fill='both', expand=True)
+        scrollbar.pack(side='right', fill='y')
+        
+        # Insert data
+        total_amount = 0.0
+        count = 0
+        
+        for item_id in self.selected_invoices:
+            if item_id in self.invoice_items:
+                invoice = self.invoice_items[item_id]
+                count += 1
+                
+                invoice_date = invoice.get('InvoiceDate', '')[:10] if len(invoice.get('InvoiceDate', '')) > 10 else invoice.get('InvoiceDate', '')
+                due_date = invoice.get('DueDate', '')[:10] if len(invoice.get('DueDate', '')) > 10 else invoice.get('DueDate', '')
+                
+                try:
+                    amount_str = str(invoice.get('UnpaidAmount', '0')).replace(',', '')
+                    amount = float(amount_str)
+                    total_amount += amount
+                    formatted_amount = f"{amount:,.2f}"
+                except:
+                    formatted_amount = str(invoice.get('UnpaidAmount', '0'))
+                
+                summary_tree.insert('', 'end', values=(
+                    count,
+                    invoice.get('InvoiceNumber', ''),
+                    invoice_date,
+                    invoice.get('MaxDueDate', ''),
+                    due_date,
+                    formatted_amount
+                ))
+        
+        # Summary section - เหมือน Step 3
+        summary_frame = tk.Frame(card, bg='#fef3c7', padx=15, pady=10, relief='solid', bd=1)
+        summary_frame.pack(fill='x', pady=(10, 15))
+        
+        # Left side
+        summary_left = tk.Frame(summary_frame, bg='#fef3c7')
+        summary_left.pack(side='left')
+        
+        tk.Label(summary_left, text=f"เลือกแล้ว: {count} รายการ",
                 font=('Segoe UI', 11, 'bold'),
-                fg='#10b981', bg='#f0f9ff').pack(anchor='w', pady=(10, 0))
+                fg='#10b981', bg='#fef3c7').pack(side='left')
+        
+        # Right side
+        summary_right = tk.Frame(summary_frame, bg='#fef3c7')
+        summary_right.pack(side='right')
+        
+        tk.Label(summary_right, text=f"ยอดรวม: {total_amount:,.2f} บาท",
+                font=('Segoe UI', 11, 'bold'),
+                fg='#dc2626', bg='#fef3c7').pack(side='right')
         
         # Action buttons
         action_frame = tk.Frame(card, bg='white')
-        action_frame.pack(fill='x', pady=(30, 0))
+        action_frame.pack(fill='x')
         
-        back_btn = tk.Button(action_frame, text="← ย้อนกลับ",
-                            font=('Segoe UI', 11),
+        back_btn = tk.Button(action_frame, text="ย้อนกลับ",
+                            font=('Segoe UI', 10),
                             bg='#6b7280', fg='white',
-                            border=0, padx=20, pady=10,
+                            border=0, padx=20, pady=8,
                             cursor='hand2',
                             command=self.show_step3)
         back_btn.pack(side='left')
         
-        confirm_btn = tk.Button(action_frame, text="✅ สร้างใบวางบิล",
-                               font=('Segoe UI', 11, 'bold'),
-                               bg='#10b981', fg='white',
-                               border=0, padx=30, pady=10,
-                               cursor='hand2',
-                               command=self.create_billing_document)
+        confirm_btn = tk.Button(action_frame, text="สร้างใบวางบิล",
+                            font=('Segoe UI', 10, 'bold'),
+                            bg='#10b981', fg='white',
+                            border=0, padx=25, pady=8,
+                            cursor='hand2',
+                            command=self.create_billing_document)
         confirm_btn.pack(side='right')
-        
+                        
+    def get_customer_detail(self):
+        """ดึงข้อมูลลูกค้าแบบละเอียดพร้อมที่อยู่"""
+        try:
+            customer_id = self.selected_customer.get('CustomerId')
+            return self.db.get_customer_detail(customer_id)
+        except Exception as e:
+            print(f"Error getting customer detail: {str(e)}")
+            return {}
+                        
     def save_selected_invoices(self):
         """บันทึกรายการใบแจ้งหนี้ที่เลือกไว้"""
         if not hasattr(self, 'selected_invoice_numbers'):
