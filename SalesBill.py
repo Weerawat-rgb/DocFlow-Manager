@@ -176,11 +176,12 @@ class SalesBillUI:
         card = tk.Frame(content, bg='white', padx=40, pady=40)
         card.pack(expand=True, fill='both')
         
-        tk.Label(card, text="🚀 เริ่มสร้างใบวางบิลขาย",
+        # Title
+        tk.Label(card, text="เริ่มสร้างใบวางบิลขาย",
                 font=('Segoe UI', 20, 'bold'),
                 fg='#1f2937', bg='white').pack(pady=(0, 10))
         
-        tk.Label(card, text="คลิกปุ่มด้านล่างเพื่อเริ่มกระบวนการสร้างใบวางบิลขายใหม่",
+        tk.Label(card, text="เลือกการดำเนินการที่ต้องการ",
                 font=('Segoe UI', 12),
                 fg='#6b7280', bg='white').pack(pady=(0, 40))
         
@@ -193,41 +194,68 @@ class SalesBillUI:
                 font=('Segoe UI Emoji', 48),
                 fg='white', bg='#10b981').pack(expand=True)
         
-        # Start button
-        start_btn = tk.Button(card, text="🛒 สร้างใบวางบิลขาย",
-                             font=('Segoe UI', 14, 'bold'),
-                             bg='#10b981', fg='white',
-                             activebackground='#059669',
-                             border=0, padx=40, pady=15,
-                             cursor='hand2',
-                             command=self.show_step2)
-        start_btn.pack()
+        # Buttons container
+        buttons_frame = tk.Frame(card, bg='white')
+        buttons_frame.pack()
         
+        # Start button
+        start_btn = tk.Button(buttons_frame, text="สร้างใบวางบิลขาย",
+                            font=('Segoe UI', 14, 'bold'),
+                            bg='#10b981', fg='white',
+                            activebackground='#059669',
+                            border=0, padx=40, pady=15,
+                            cursor='hand2',
+                            command=self.show_step2)
+        start_btn.pack(side='left', padx=(0, 20))
+        
+        # History button
+        history_btn = tk.Button(buttons_frame, text="ดูประวัติใบวางบิล",
+                            font=('Segoe UI', 14, 'bold'),
+                            bg='#3b82f6', fg='white',
+                            activebackground='#2563eb',
+                            border=0, padx=40, pady=15,
+                            cursor='hand2',
+                            command=self.open_billing_history)
+        history_btn.pack(side='left')
+        
+        # Hover effects
         start_btn.bind("<Enter>", lambda e: start_btn.config(bg='#059669'))
         start_btn.bind("<Leave>", lambda e: start_btn.config(bg='#10b981'))
-    
+        
+        history_btn.bind("<Enter>", lambda e: history_btn.config(bg='#2563eb'))
+        history_btn.bind("<Leave>", lambda e: history_btn.config(bg='#3b82f6'))
+
+    def open_billing_history(self):
+        """เปิดหน้าประวัติใบวางบิล"""
+        try:
+            from SalesBill_History import SalesBillHistoryUI
+            SalesBillHistoryUI(self.window, self.user_data)
+        except Exception as e:
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถเปิดหน้าประวัติได้: {str(e)}")
+            print(f"Error opening history: {str(e)}")
+                
     def show_step2(self):
         self.current_step = 2
         self.create_step_indicator()
         self.clear_content()
         
         content = tk.Frame(self.window, bg='#f8fafc')
-        content.pack(fill='both', expand=True, padx=20, pady=10)  # ลด padding
+        content.pack(fill='both', expand=True, padx=20, pady=10)
         content._content = True
         
-        card = tk.Frame(content, bg='white', padx=20, pady=20)  # ลด padding
+        card = tk.Frame(content, bg='white', padx=20, pady=20)
         card.pack(expand=True, fill='both')
         
-        # Title - เล็กลง
+        # Title
         tk.Label(card, text="ค้นหาลูกค้า",
-                font=('Segoe UI', 16, 'bold'),  # ลดขนาด
+                font=('Segoe UI', 16, 'bold'),
                 fg='#1f2937', bg='white').pack(pady=(0, 5))
         
         tk.Label(card, text="ป้อนชื่อบริษัทหรือเลขประจำตัวผู้เสียภาษี",
-                font=('Segoe UI', 10),  # ลดขนาด
+                font=('Segoe UI', 10),
                 fg='#6b7280', bg='white').pack(pady=(0, 15))
         
-        # Search section - กะทัดรัด
+        # Search section
         search_frame = tk.Frame(card, bg='white')
         search_frame.pack(fill='x', pady=(0, 15))
         
@@ -253,8 +281,21 @@ class SalesBillUI:
         self.results_frame = tk.Frame(card, bg='white')
         self.results_frame.pack(fill='both', expand=True)
         
+        # Back button at bottom
+        back_frame = tk.Frame(card, bg='white')
+        back_frame.pack(fill='x', pady=(15, 0))
+        
+        back_btn = tk.Button(back_frame, text="← ย้อนกลับ",
+                            font=('Segoe UI', 10),
+                            bg='#6b7280', fg='white',
+                            border=0, padx=20, pady=8,
+                            cursor='hand2',
+                            command=self.show_step1)
+        back_btn.pack(side='left')
+        
+        # Load initial customers
         self.search_customers()
-            
+                    
     def search_customers(self, event=None):
         search_term = self.search_entry.get().strip()
         
@@ -1103,24 +1144,147 @@ class SalesBillUI:
             customer_id = self.selected_customer.get('CustomerId')
             created_by = self.user_data.get('username', 'Unknown')
             
+            # ดึงเลขที่ใบแจ้งหนี้จริงจาก selected_invoices
+            actual_invoice_numbers = []
+            for item_id in self.selected_invoices:
+                if item_id in self.invoice_items:
+                    invoice_number = self.invoice_items[item_id].get('InvoiceNumber', '')
+                    if invoice_number:
+                        actual_invoice_numbers.append(str(invoice_number))
+            
+            if not actual_invoice_numbers:
+                messagebox.showerror("ข้อผิดพลาด", "ไม่พบรายการใบแจ้งหนี้ที่เลือก")
+                return
+            
             billing_doc_no = self.db.create_billing_document(
                 customer_id=customer_id,
-                invoice_numbers=self.selected_invoices,
+                invoice_numbers=actual_invoice_numbers,
                 created_by=created_by
             )
             
             if billing_doc_no:
-                messagebox.showinfo(
+                # สอบถามว่าต้องการแสดงตัวอย่างใบวางบิลหรือไม่
+                response = messagebox.askyesno(
                     "สำเร็จ", 
-                    f"สร้างใบวางบิลเรียบร้อยแล้ว\nเลขที่เอกสาร: {billing_doc_no}"
+                    f"สร้างใบวางบิลเรียบร้อยแล้ว\nเลขที่เอกสาร: {billing_doc_no}\n\nคุณต้องการแสดงตัวอย่างใบวางบิลหรือไม่?",
+                    icon='question'
                 )
+                
+                if response:  # ถ้าตอบ Yes
+                    self.show_billing_template(billing_doc_no, customer_id, actual_invoice_numbers)
+                
                 self.reset_form()
             else:
                 messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถสร้างใบวางบิลได้")
                 
         except Exception as e:
             messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด: {str(e)}")
-    
+            print(f"Error in create_billing_document: {str(e)}")
+
+    def show_billing_template(self, billing_doc_no, customer_id, invoice_numbers):
+        """แสดงตัวอย่างใบวางบิลด้วยข้อมูลจริง"""
+        try:
+            # Import BillingNoteGenerator
+            from billing_note_generator import BillingNoteGenerator
+            
+            # เตรียมข้อมูลสำหรับ template
+            template_data = self.prepare_template_data(billing_doc_no, customer_id, invoice_numbers)
+            
+            # แสดงตัวอย่างด้วยข้อมูลจริง
+            BillingNoteGenerator.Preview_Template_With_Data(template_data, 'sales')
+            
+        except ImportError as e:
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่พบ BillingNoteGenerator: {str(e)}")
+        except Exception as e:
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถแสดงตัวอย่างใบวางบิลได้: {str(e)}")
+            print(f"Error showing template: {str(e)}")
+
+    def prepare_template_data(self, billing_doc_no, customer_id, invoice_numbers):
+        """เตรียมข้อมูลสำหรับ template"""
+        try:
+            # ดึงข้อมูลลูกค้าแบบละเอียด
+            customer_detail = self.db.get_customer_detail(customer_id)
+            
+            # คำนวณยอดรวม
+            total_amount = 0.0
+            invoice_items = []
+            
+            for item_id in self.selected_invoices:
+                if item_id in self.invoice_items:
+                    invoice = self.invoice_items[item_id]
+                    
+                    # แปลงข้อมูลวันที่
+                    invoice_date = invoice.get('InvoiceDate', '')[:10] if len(invoice.get('InvoiceDate', '')) > 10 else invoice.get('InvoiceDate', '')
+                    due_date = invoice.get('DueDate', '')[:10] if len(invoice.get('DueDate', '')) > 10 else invoice.get('DueDate', '')
+                    
+                    try:
+                        unpaid_amount = float(str(invoice.get('UnpaidAmount', '0')).replace(',', ''))
+                        total_amount += unpaid_amount
+                    except:
+                        unpaid_amount = 0.0
+                    
+                    invoice_items.append({
+                        'type': 'ใบแจ้งหนี้',
+                        'docNo': invoice.get('InvoiceNumber', ''),
+                        'date': invoice_date,
+                        'credit': str(invoice.get('MaxDueDate', '')),
+                        'dueDate': due_date,
+                        'total': f"{unpaid_amount:,.2f}",
+                        'paidAmount': '0.00',
+                        'unpaidAmount': f"{unpaid_amount:,.2f}"
+                    })
+            
+            # เตรียมข้อมูลสำหรับ template
+            template_data = {
+                'DocumentTitle': 'ใบวางบิลขาย',
+                
+                # ข้อมูลลูกค้า
+                'CustomerName': customer_detail.get('Name', ''),
+                'CustomerAddress': customer_detail.get('full_address', ''),
+                'PhoneMobile': customer_detail.get('PhoneMobile', ''),
+                'CustomerTaxNum': '',
+                
+                # ข้อมูลเอกสาร
+                'DocNo': billing_doc_no,
+                'DocDate': datetime.now().strftime('%d/%m/%Y'),
+                
+                # ข้อมูลรายการแรก (ถ้ามี)
+                'InvoiceNumber': invoice_items[0]['docNo'] if invoice_items else '',
+                'InvoiceDate': invoice_items[0]['date'] if invoice_items else '',
+                'MaxDueDate': invoice_items[0]['credit'] if invoice_items else '',
+                'DueDate': invoice_items[0]['dueDate'] if invoice_items else '',
+                'Total': invoice_items[0]['total'] if invoice_items else '0.00',
+                'PaidAmount': '0.00',
+                'UnpaidAmount': invoice_items[0]['unpaidAmount'] if invoice_items else '0.00',
+                
+                # ข้อมูลสรุป
+                'TotalUnpaidAmount': f"{total_amount:,.2f}",
+                'TextThaiBaht': self.convert_to_thai_text(total_amount),
+                
+                # รายการเพิ่มเติม (ถ้ามีมากกว่า 1 รายการ)
+                'additionalItems': invoice_items[1:] if len(invoice_items) > 1 else []
+            }
+            
+            return template_data
+            
+        except Exception as e:
+            print(f"Error preparing template data: {str(e)}")
+            return {}
+
+    def convert_to_thai_text(self, amount):
+        """แปลงตัวเลขเป็นตัวอักษรไทย (ตัวอย่างง่าย ๆ)"""
+        try:
+            # ตัวอย่างง่าย ๆ - ในการใช้งานจริงอาจต้องใช้ library
+            amount_int = int(amount)
+            if amount_int == 0:
+                return "ศูนยบาทถ้วน"
+            elif amount_int < 1000:
+                return f"(จำนวน {amount_int:,.0f} บาท)"
+            else:
+                return f"(จำนวน {amount_int:,.0f} บาท)"
+        except:
+            return f"(จำนวน {amount:,.0f} บาท)"
+                        
     def reset_form(self):
         self.selected_customer = None
         self.selected_invoices = []

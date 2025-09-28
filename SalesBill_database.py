@@ -346,13 +346,20 @@ class SalesBillDatabase:
             # Get customer detail
             customer_detail = self.get_customer_detail(customer_id)
             
-            # Get complete invoice data and calculate totals
-            total_amount = 0.0
-            total_unpaid = 0.0
+            # Debug: แสดงรายการที่ได้รับ
+            print(f"📋 รายการใบแจ้งหนี้ที่ได้รับ: {invoice_numbers}")
+            print(f"📋 ประเภทข้อมูล: {[type(inv) for inv in invoice_numbers]}")
+            
+            # Get invoice data
+            total_unpaid_amount = 0.0
             invoice_details = []
             
             for invoice_no in invoice_numbers:
-                # Get complete invoice data ตรงกับที่แสดงในรูป
+                # แปลงเป็น string และลบช่องว่าง
+                invoice_no_str = str(invoice_no).strip()
+                
+                print(f"🔍 กำลังค้นหาใบแจ้งหนี้: '{invoice_no_str}'")
+                
                 cursor.execute("""
                     SELECT 
                         iv.InvoiceNumber,
@@ -361,31 +368,48 @@ class SalesBillDatabase:
                         DATEADD(day, iv.MaxDueDate, iv.InvoiceDate) as DueDate,
                         it.Total,
                         it.PaidAmount,
-                        it.UnpaidAmount
+                        it.UnpaidAmount,
+                        iv.Status
                     FROM Invoice iv
                     INNER JOIN InvoiceItem it ON it.InvoiceId = iv.InvoiceId
                     WHERE iv.InvoiceNumber = ?
-                """, (invoice_no,))
+                """, (invoice_no_str,))
                 
                 result = cursor.fetchone()
                 if result:
-                    # แปลงข้อมูลให้เป็น float
-                    total = float(str(result[4]).replace(',', '')) if result[4] else 0.0
-                    paid_amount = float(str(result[5]).replace(',', '')) if result[5] else 0.0
-                    unpaid_amount = float(str(result[6]).replace(',', '')) if result[6] else 0.0
+                    print(f"✅ พบข้อมูลใบแจ้งหนี้: {result[0]}, Status: {result[7]}, UnpaidAmount: {result[6]}")
                     
-                    total_amount += total  # รวมจาก Total ไม่ใช่ UnpaidAmount
-                    total_unpaid += unpaid_amount
+                    # แปลงข้อมูล
+                    try:
+                        unpaid_amount = float(str(result[6]).replace(',', '')) if result[6] else 0.0
+                        total_amount = float(str(result[4]).replace(',', '')) if result[4] else 0.0
+                        paid_amount = float(str(result[5]).replace(',', '')) if result[5] else 0.0
+                    except (ValueError, TypeError) as e:
+                        print(f"❌ ข้อผิดพลาดในการแปลงตัวเลข: {e}")
+                        unpaid_amount = 0.0
+                        total_amount = 0.0
+                        paid_amount = 0.0
+                    
+                    total_unpaid_amount += unpaid_amount
                     
                     invoice_details.append({
                         'InvoiceNumber': result[0],
                         'InvoiceDate': result[1],
                         'MaxDueDate': result[2],
                         'DueDate': result[3],
-                        'Total': total,
+                        'Total': total_amount,
                         'PaidAmount': paid_amount,
-                        'UnpaidAmount': unpaid_amount
+                        'UnpaidAmount': unpaid_amount,
+                        'Status': result[7]
                     })
+                else:
+                    print(f"❌ ไม่พบใบแจ้งหนี้: '{invoice_no_str}'")
+            
+            print(f"💰 ยอดรวมที่คำนวณได้: {total_unpaid_amount}")
+            
+            if not invoice_details:
+                print("❌ ไม่มีข้อมูลใบแจ้งหนี้ที่ถูกต้อง")
+                return None
             
             # Insert billing document header
             insert_header = """
@@ -398,18 +422,18 @@ class SalesBillDatabase:
             customer_name = customer_detail.get('Name', '')
             customer_address = customer_detail.get('full_address', '')
             customer_phone = customer_detail.get('PhoneMobile', '')
-            notes = f"สร้างจากรายการใบแจ้งหนี้ {len(invoice_numbers)} รายการ ยอดรวม {total_amount:,.2f} บาท"
+            notes = f"ใบวางบิลจำนวน {len(invoice_details)} รายการ"
             
             cursor.execute(insert_header, (
                 billing_doc_no, customer_id, customer_name, customer_address, 
-                customer_phone, created_by, total_amount, len(invoice_numbers), notes
+                customer_phone, created_by, total_unpaid_amount, len(invoice_details), notes
             ))
             
-            # Get the inserted billing document ID
+            # Get billing document ID
             cursor.execute("SELECT @@IDENTITY")
             billing_doc_id = cursor.fetchone()[0]
             
-            # Insert billing document items พร้อมข้อมูลครบถ้วน
+            # Insert billing document items
             for index, invoice_detail in enumerate(invoice_details, 1):
                 insert_item = """
                 INSERT INTO BillingDocumentItem 
@@ -427,29 +451,46 @@ class SalesBillDatabase:
                     invoice_detail['Total'],
                     invoice_detail['PaidAmount'],
                     invoice_detail['UnpaidAmount'],
-                    invoice_detail['Total'],  # InvoiceAmount = Total
+                    invoice_detail['UnpaidAmount'],
                     index
                 ))
             
-            # Update Invoice Status to 99
-            for invoice_no in invoice_numbers:
+            # Update Invoice Status = 99
+            updated_count = 0
+            for invoice_detail in invoice_details:
+                invoice_no_str = str(invoice_detail['InvoiceNumber']).strip()
+                
+                print(f"🔄 กำลังอัพเดท Status ใบแจ้งหนี้: {invoice_no_str}")
+                
                 cursor.execute("""
                     UPDATE Invoice 
                     SET Status = 99 
-                    WHERE InvoiceNumber = ?
-                """, (invoice_no,))
+                    WHERE InvoiceNumber = ? AND Status != 99
+                """, (invoice_no_str,))
+                
+                rows_affected = cursor.rowcount
+                print(f"📝 อัพเดท {invoice_no_str}: {rows_affected} แถว")
+                
+                if rows_affected > 0:
+                    updated_count += 1
             
             self.connection.commit()
+            
             print(f"สร้างเอกสารใบวางบิล {billing_doc_no} สำเร็จ")
-            print(f"ยอดรวม: {total_amount:,.2f} บาท")
-            print(f"ยอดค้างชำระ: {total_unpaid:,.2f} บาท")
-            print(f"อัพเดท Invoice Status เป็น 99 จำนวน {len(invoice_numbers)} รายการ")
+            print(f"ข้อมูลที่บันทึก:")
+            print(f"   - ลูกค้า: {customer_name}")
+            print(f"   - จำนวนรายการ: {len(invoice_details)} รายการ")
+            print(f"   - ยอดรวม: {total_unpaid_amount:,.2f} บาท")
+            print(f"   - อัพเดท Invoice Status = 99: {updated_count} รายการ")
+            
             return billing_doc_no
             
         except Exception as e:
             self.connection.rollback()
             print(f"ข้อผิดพลาดในการสร้างเอกสารใบวางบิล: {str(e)}")
-            return None
+            import traceback
+            traceback.print_exc()
+            return None        
                             
     def close_connection(self):
         """ปิดการเชื่อมต่อฐานข้อมูล"""
@@ -511,3 +552,142 @@ class SalesBillDatabase:
         except Exception as e:
             print(f"❌ การเชื่อมต่อฐานข้อมูลมีปัญหา: {str(e)}")
             return False
+        
+    def get_billing_history(self, date_from: str, date_to: str) -> List[Dict]:
+        """ดึงประวัติใบวางบิล"""
+        try:
+            cursor = self.connection.cursor()
+            
+            query = """
+            SELECT 
+                BillingDocNumber,
+                CreateDate,
+                CustomerName,
+                TotalAmount,
+                TotalItems,
+                CreatedBy,
+                Status
+            FROM BillingDocument
+            WHERE CAST(CreateDate AS DATE) BETWEEN ? AND ?
+            ORDER BY CreateDate DESC
+            """
+            
+            cursor.execute(query, (date_from, date_to))
+            columns = [desc[0] for desc in cursor.description]
+            results = []
+            
+            for row in cursor.fetchall():
+                billing = dict(zip(columns, row))
+                results.append(billing)
+            
+            return results
+            
+        except Exception as e:
+            print(f"ข้อผิดพลาดในการดึงประวัติ: {str(e)}")
+            return []
+
+    def search_billing_history(self, search_term: str, date_from: str, date_to: str) -> List[Dict]:
+        """ค้นหาประวัติใบวางบิล"""
+        try:
+            cursor = self.connection.cursor()
+            
+            query = """
+            SELECT 
+                BillingDocNumber,
+                CreateDate,
+                CustomerName,
+                TotalAmount,
+                TotalItems,
+                CreatedBy,
+                Status
+            FROM BillingDocument
+            WHERE CAST(CreateDate AS DATE) BETWEEN ? AND ?
+            AND (BillingDocNumber LIKE ? OR CustomerName LIKE ? OR CreatedBy LIKE ?)
+            ORDER BY CreateDate DESC
+            """
+            
+            search_pattern = f"%{search_term}%"
+            cursor.execute(query, (date_from, date_to, search_pattern, search_pattern, search_pattern))
+            columns = [desc[0] for desc in cursor.description]
+            results = []
+            
+            for row in cursor.fetchall():
+                billing = dict(zip(columns, row))
+                results.append(billing)
+            
+            return results
+            
+        except Exception as e:
+            print(f"❌ การเชื่อมต่อฐานข้อมูลมีปัญหา: {str(e)}")
+            return False
+        
+    def get_billing_detail(self, billing_doc_number: str) -> Dict:
+        """ดึงรายละเอียดใบวางบิล"""
+        try:
+            cursor = self.connection.cursor()
+            
+            query = """
+            SELECT 
+                BillingDocNumber,
+                CustomerId,
+                CustomerName,
+                CustomerAddress,
+                CustomerPhone,
+                CreateDate,
+                CreatedBy,
+                TotalAmount,
+                TotalItems,
+                Status,
+                Notes
+            FROM BillingDocument
+            WHERE BillingDocNumber = ?
+            """
+            
+            cursor.execute(query, (billing_doc_number,))
+            columns = [desc[0] for desc in cursor.description]
+            row = cursor.fetchone()
+            
+            if row:
+                return dict(zip(columns, row))
+            
+            return {}
+            
+        except Exception as e:
+            print(f"ข้อผิดพลาดในการดึงรายละเอียด: {str(e)}")
+            return {}
+
+    def get_billing_items(self, billing_doc_number: str) -> List[Dict]:
+        """ดึงรายการใบแจ้งหนี้ในใบวางบิล"""
+        try:
+            cursor = self.connection.cursor()
+            
+            query = """
+            SELECT 
+                bdi.ItemOrder,
+                bdi.InvoiceNumber,
+                bdi.InvoiceDate,
+                bdi.MaxDueDate,
+                bdi.DueDate,
+                bdi.Total,
+                bdi.PaidAmount,
+                bdi.UnpaidAmount,
+                bdi.InvoiceAmount
+            FROM BillingDocumentItem bdi
+            INNER JOIN BillingDocument bd ON bd.BillingDocId = bdi.BillingDocId
+            WHERE bd.BillingDocNumber = ?
+            ORDER BY bdi.ItemOrder
+            """
+            
+            cursor.execute(query, (billing_doc_number,))
+            columns = [desc[0] for desc in cursor.description]
+            results = []
+            
+            for row in cursor.fetchall():
+                item = dict(zip(columns, row))
+                results.append(item)
+            
+            return results
+            
+        except Exception as e:
+            print(f"ข้อผิดพลาดในการดึงรายการ: {str(e)}")
+            return []
