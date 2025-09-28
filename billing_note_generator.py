@@ -118,7 +118,8 @@ class BillingNoteGenerator:
             # รายการเพิ่มเติม (ถ้ามี)
             'additionalItems': [
                 {
-                    'type': 'ใบขาย',
+                    'order': 2,  # เพิ่มลำดับ
+                    'type': 'ใบขาย',  # เปลี่ยนเป็น ใบแจ้งหนี้
                     'docNo': 'INV-2025-002',
                     'date': '12/01/2025',
                     'credit': '30',
