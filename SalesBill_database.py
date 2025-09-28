@@ -306,8 +306,36 @@ class SalesBillDatabase:
             print(f"Error getting customer detail: {str(e)}")
             return {}
     
+    def generate_billing_doc_number(self) -> str:
+        """สร้างเลขที่เอกสารใบวางบิล รูปแบบ DOCYYMM###"""
+        try:
+            cursor = self.connection.cursor()
+            
+            # Get current year and month (YY = 2 digit year, MM = month)
+            cursor.execute("SELECT FORMAT(GETDATE(), 'yyMM')")
+            year_month = cursor.fetchone()[0]
+            
+            # Get next sequence number (3 digits)
+            cursor.execute("""
+                SELECT ISNULL(MAX(CAST(RIGHT(BillingDocNumber, 3) AS INT)), 0) + 1
+                FROM BillingDocument 
+                WHERE LEFT(BillingDocNumber, 7) = ?
+            """, (f"DOC{year_month}",))
+            
+            next_seq = cursor.fetchone()[0]
+            
+            # Format: DOC + YYMM + running number (3 digits)
+            return f"DOC{year_month}{next_seq:03d}"
+            
+        except Exception as e:
+            print(f"❌ ข้อผิดพลาดในการสร้างเลขที่เอกสาร: {str(e)}")
+            # Fallback in case of error
+            from datetime import datetime
+            now = datetime.now()
+            return f"DOC{now.strftime('%y%m')}001"
+
     def create_billing_document(self, customer_id: int, invoice_numbers: List[str], 
-                               created_by: str) -> Optional[str]:
+                            created_by: str) -> Optional[str]:
         """สร้างเอกสารใบวางบิล"""
         try:
             cursor = self.connection.cursor()
@@ -315,61 +343,114 @@ class SalesBillDatabase:
             # Generate billing document number
             billing_doc_no = self.generate_billing_doc_number()
             
+            # Get customer detail
+            customer_detail = self.get_customer_detail(customer_id)
+            
+            # Get complete invoice data and calculate totals
+            total_amount = 0.0
+            total_unpaid = 0.0
+            invoice_details = []
+            
+            for invoice_no in invoice_numbers:
+                # Get complete invoice data ตรงกับที่แสดงในรูป
+                cursor.execute("""
+                    SELECT 
+                        iv.InvoiceNumber,
+                        iv.InvoiceDate,
+                        iv.MaxDueDate,
+                        DATEADD(day, iv.MaxDueDate, iv.InvoiceDate) as DueDate,
+                        it.Total,
+                        it.PaidAmount,
+                        it.UnpaidAmount
+                    FROM Invoice iv
+                    INNER JOIN InvoiceItem it ON it.InvoiceId = iv.InvoiceId
+                    WHERE iv.InvoiceNumber = ?
+                """, (invoice_no,))
+                
+                result = cursor.fetchone()
+                if result:
+                    # แปลงข้อมูลให้เป็น float
+                    total = float(str(result[4]).replace(',', '')) if result[4] else 0.0
+                    paid_amount = float(str(result[5]).replace(',', '')) if result[5] else 0.0
+                    unpaid_amount = float(str(result[6]).replace(',', '')) if result[6] else 0.0
+                    
+                    total_amount += total  # รวมจาก Total ไม่ใช่ UnpaidAmount
+                    total_unpaid += unpaid_amount
+                    
+                    invoice_details.append({
+                        'InvoiceNumber': result[0],
+                        'InvoiceDate': result[1],
+                        'MaxDueDate': result[2],
+                        'DueDate': result[3],
+                        'Total': total,
+                        'PaidAmount': paid_amount,
+                        'UnpaidAmount': unpaid_amount
+                    })
+            
             # Insert billing document header
             insert_header = """
             INSERT INTO BillingDocument 
-            (BillingDocNumber, CustomerId, CreateDate, CreatedBy, Status)
-            VALUES (?, ?, GETDATE(), ?, 'Active')
+            (BillingDocNumber, CustomerId, CustomerName, CustomerAddress, CustomerPhone,
+            CreateDate, CreatedBy, TotalAmount, TotalItems, Status, Notes)
+            VALUES (?, ?, ?, ?, ?, GETDATE(), ?, ?, ?, 'Active', ?)
             """
             
-            cursor.execute(insert_header, (billing_doc_no, customer_id, created_by))
+            customer_name = customer_detail.get('Name', '')
+            customer_address = customer_detail.get('full_address', '')
+            customer_phone = customer_detail.get('PhoneMobile', '')
+            notes = f"สร้างจากรายการใบแจ้งหนี้ {len(invoice_numbers)} รายการ ยอดรวม {total_amount:,.2f} บาท"
+            
+            cursor.execute(insert_header, (
+                billing_doc_no, customer_id, customer_name, customer_address, 
+                customer_phone, created_by, total_amount, len(invoice_numbers), notes
+            ))
             
             # Get the inserted billing document ID
             cursor.execute("SELECT @@IDENTITY")
             billing_doc_id = cursor.fetchone()[0]
             
-            # Insert billing document items
-            for invoice_no in invoice_numbers:
+            # Insert billing document items พร้อมข้อมูลครบถ้วน
+            for index, invoice_detail in enumerate(invoice_details, 1):
                 insert_item = """
                 INSERT INTO BillingDocumentItem 
-                (BillingDocId, InvoiceNumber)
-                VALUES (?, ?)
+                (BillingDocId, InvoiceNumber, InvoiceDate, MaxDueDate, DueDate, 
+                Total, PaidAmount, UnpaidAmount, InvoiceAmount, ItemOrder)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
-                cursor.execute(insert_item, (billing_doc_id, invoice_no))
+                
+                cursor.execute(insert_item, (
+                    billing_doc_id,
+                    invoice_detail['InvoiceNumber'],
+                    invoice_detail['InvoiceDate'],
+                    invoice_detail['MaxDueDate'],
+                    invoice_detail['DueDate'],
+                    invoice_detail['Total'],
+                    invoice_detail['PaidAmount'],
+                    invoice_detail['UnpaidAmount'],
+                    invoice_detail['Total'],  # InvoiceAmount = Total
+                    index
+                ))
+            
+            # Update Invoice Status to 99
+            for invoice_no in invoice_numbers:
+                cursor.execute("""
+                    UPDATE Invoice 
+                    SET Status = 99 
+                    WHERE InvoiceNumber = ?
+                """, (invoice_no,))
             
             self.connection.commit()
-            print(f"✅ สร้างเอกสารใบวางบิล {billing_doc_no} สำเร็จ")
+            print(f"สร้างเอกสารใบวางบิล {billing_doc_no} สำเร็จ")
+            print(f"ยอดรวม: {total_amount:,.2f} บาท")
+            print(f"ยอดค้างชำระ: {total_unpaid:,.2f} บาท")
+            print(f"อัพเดท Invoice Status เป็น 99 จำนวน {len(invoice_numbers)} รายการ")
             return billing_doc_no
             
         except Exception as e:
             self.connection.rollback()
-            print(f"❌ ข้อผิดพลาดในการสร้างเอกสารใบวางบิล: {str(e)}")
+            print(f"ข้อผิดพลาดในการสร้างเอกสารใบวางบิล: {str(e)}")
             return None
-    
-    def generate_billing_doc_number(self) -> str:
-        """สร้างเลขที่เอกสารใบวางบิล"""
-        try:
-            cursor = self.connection.cursor()
-            
-            # Get current year and month
-            cursor.execute("SELECT FORMAT(GETDATE(), 'yyyyMM')")
-            year_month = cursor.fetchone()[0]
-            
-            # Get next sequence number
-            cursor.execute("""
-                SELECT ISNULL(MAX(CAST(RIGHT(BillingDocNumber, 4) AS INT)), 0) + 1
-                FROM BillingDocument 
-                WHERE LEFT(BillingDocNumber, 8) = ?
-            """, (f"BL{year_month}",))
-            
-            next_seq = cursor.fetchone()[0]
-            
-            return f"BL{year_month}{next_seq:04d}"
-            
-        except Exception as e:
-            print(f"❌ ข้อผิดพลาดในการสร้างเลขที่เอกสาร: {str(e)}")
-            return f"BL{year_month}0001"
-    
+                            
     def close_connection(self):
         """ปิดการเชื่อมต่อฐานข้อมูล"""
         if self.connection:
