@@ -203,22 +203,31 @@ class BillingNoteGenerator:
         return self.processor.preview_in_browser(template_content, data)
     
     def get_template(self):
-        """ดึง HTML template จากไฟล์หรือใช้ default"""
-        template_path = r'D:\_project\DocFlow-Manager\templates\billing_note_template.html'
+        """ดึง HTML template จากไฟล์"""
+        # เลือก template file ตาม type
+        if self.template_type == 'purchase':
+            template_filename = 'purchase_billing_template.html'
+        elif self.template_type == 'branch':
+            template_filename = 'branch_billing_template.html'
+        else:  # default = sales
+            template_filename = 'billing_note_template.html'
+        
+        template_path = rf'D:\_project\DocFlow-Manager\templates\{template_filename}'
+        
+        print(f"Loading template: {template_path}")  # Debug
         
         try:
-            # อ่าน template จากไฟล์
             with open(template_path, 'r', encoding='utf-8') as f:
-                return f.read()
+                content = f.read()
+                print(f"Template loaded successfully: {len(content)} chars")
+                return content
         except FileNotFoundError:
             print(f"ไม่พบไฟล์ template: {template_path}")
-            print("กำลังใช้ template เริ่มต้น...")
             return self.get_default_template()
         except Exception as e:
             print(f"เกิดข้อผิดพลาดในการอ่านไฟล์: {str(e)}")
-            print("กำลังใช้ template เริ่มต้น...")
             return self.get_default_template()
-    
+                    
     def get_default_template(self):
         """Template เริ่มต้นกรณีไม่พบไฟล์"""
         return '''<!DOCTYPE html>
