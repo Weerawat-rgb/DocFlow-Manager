@@ -553,39 +553,53 @@ class SalesBillDatabase:
             print(f"❌ การเชื่อมต่อฐานข้อมูลมีปัญหา: {str(e)}")
             return False
         
-    def get_billing_history(self, date_from: str, date_to: str) -> List[Dict]:
-        """ดึงประวัติใบวางบิล"""
+    def get_billing_history(self, date_from=None, date_to=None):
+        """ดึงประวัติใบวางบิลตามช่วงวันที่"""
         try:
             cursor = self.connection.cursor()
             
             query = """
             SELECT 
-                BillingDocNumber,
-                CreateDate,
-                CustomerName,
-                TotalAmount,
-                TotalItems,
-                CreatedBy,
-                Status
-            FROM BillingDocument
-            WHERE CAST(CreateDate AS DATE) BETWEEN ? AND ?
-            ORDER BY CreateDate DESC
+                bd.BillingDocNumber,
+                bd.CreateDate,
+                bd.CustomerName,
+                bd.TotalAmount,
+                bd.TotalItems,
+                bd.CreatedBy,
+                CASE 
+                    WHEN bd.Status = 'InActive' THEN 'ยกเลิกแล้ว'
+                    ELSE 'ใช้งาน'
+                END as Status
+            FROM BillingDocument bd
+            WHERE 1=1
             """
             
-            cursor.execute(query, (date_from, date_to))
-            columns = [desc[0] for desc in cursor.description]
+            params = []
+            
+            if date_from:
+                query += " AND CAST(bd.CreateDate AS DATE) >= ?"
+                params.append(date_from)
+            
+            if date_to:
+                query += " AND CAST(bd.CreateDate AS DATE) <= ?"
+                params.append(date_to)
+            
+            query += " ORDER BY bd.CreateDate DESC"
+            
+            cursor.execute(query, params)
+            
+            columns = [column[0] for column in cursor.description]
             results = []
             
             for row in cursor.fetchall():
-                billing = dict(zip(columns, row))
-                results.append(billing)
+                results.append(dict(zip(columns, row)))
             
             return results
             
         except Exception as e:
-            print(f"ข้อผิดพลาดในการดึงประวัติ: {str(e)}")
-            return []
-
+            print(f"Error getting billing history: {str(e)}")
+            return []    
+            
     def search_billing_history(self, search_term: str, date_from: str, date_to: str) -> List[Dict]:
         """ค้นหาประวัติใบวางบิล"""
         try:
@@ -691,3 +705,54 @@ class SalesBillDatabase:
         except Exception as e:
             print(f"ข้อผิดพลาดในการดึงรายการ: {str(e)}")
             return []
+        
+    def cancel_billing_document(self, billing_doc_number):
+        """ยกเลิกใบวางบิล - เปลี่ยนสถานะเป็น InActive และคืนสถานะ Invoice"""
+        try:
+            cursor = self.connection.cursor()
+            
+            # 1. ดึงรายการ Invoice ที่เกี่ยวข้องก่อนยกเลิก
+            cursor.execute("""
+                SELECT bdi.InvoiceNumber 
+                FROM BillingDocumentItem bdi
+                INNER JOIN BillingDocument bd ON bd.BillingDocId = bdi.BillingDocId
+                WHERE bd.BillingDocNumber = ?
+            """, (billing_doc_number,))
+            
+            invoice_numbers = [row[0] for row in cursor.fetchall()]
+            
+            if not invoice_numbers:
+                return False, "ไม่พบรายการใบแจ้งหนี้ในเอกสารนี้"
+            
+            # 2. อัพเดทสถานะ BillingDocument เป็น InActive
+            cursor.execute("""
+                UPDATE BillingDocument 
+                SET Status = 'InActive'
+                WHERE BillingDocNumber = ?
+            """, (billing_doc_number,))
+            
+            # 3. คืนสถานะ Invoice เป็น 0 (ยังไม่ได้วางบิล)
+            placeholders = ','.join(['?' for _ in invoice_numbers])
+            cursor.execute(f"""
+                UPDATE invoice 
+                SET Status = 0
+                WHERE InvoiceNumber IN ({placeholders})
+            """, invoice_numbers)
+            
+            # Commit transaction
+            self.connection.commit()
+            
+            updated_count = len(invoice_numbers)
+            
+            print(f"✅ ยกเลิกใบวางบิล {billing_doc_number} สำเร็จ")
+            print(f"   - คืนสถานะ Invoice: {updated_count} รายการ")
+            
+            return True, f"ยกเลิกสำเร็จ: คืนสถานะ {updated_count} รายการ"
+            
+        except Exception as e:
+            print(f"❌ Error canceling billing document: {str(e)}")
+            try:
+                self.connection.rollback()
+            except:
+                pass
+            return False, f"เกิดข้อผิดพลาด: {str(e)}"

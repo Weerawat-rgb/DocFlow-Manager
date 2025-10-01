@@ -70,29 +70,52 @@ class BillingNoteGenerator:
         """สร้างข้อมูลตัวอย่างสำหรับใบวางบิล - ใช้ข้อมูลจริงจากฐานข้อมูล"""
         document_title = self.get_document_title()
         
+        print("\n" + "="*60)
+        print("🔄 กำลังดึงข้อมูลบริษัทจากฐานข้อมูล...")
+        print("="*60)
+        
         # ดึงข้อมูลบริษัทจากฐานข้อมูล
+        company_data = {}
+        
         if HAS_DATABASE:
             try:
+                print("📡 กำลังเชื่อมต่อฐานข้อมูล...")
                 company_data = get_company_data()
-                print("✅ ใช้ข้อมูลบริษัทจากฐานข้อมูล")
+                
+                print("✅ ดึงข้อมูลจากฐานข้อมูลสำเร็จ!")
+                print("\n📦 ข้อมูลที่ได้จาก database:")
+                for key, value in company_data.items():
+                    if key == 'SitePicture' and value:
+                        print(f"  ✓ {key}: [Image - {len(value)} chars]")
+                    else:
+                        print(f"  ✓ {key}: {value}")
+                print("="*60 + "\n")
+                
             except Exception as e:
-                print(f"❌ เกิดข้อผิดพลาดในการดึงข้อมูลจากฐานข้อมูล: {str(e)}")
+                print(f"❌ Error: {str(e)}")
+                import traceback
+                traceback.print_exc()
                 company_data = self.get_mock_company_data()
+                print("⚠️ ใช้ mock data แทน")
         else:
+            print("❌ ไม่มี database_manager.py")
             company_data = self.get_mock_company_data()
         
-        # รวมข้อมูลทั้งหมด
+        # ตรวจสอบว่า company_data มีข้อมูลหรือไม่
+        if not company_data:
+            print("⚠️ company_data ว่างเปล่า! ใช้ mock data")
+            company_data = self.get_mock_company_data()
+        
+        # สร้าง data dictionary
         data = {
-            # หัวข้อเอกสาร
             'DocumentTitle': document_title,
-        }
-        
-        # เพิ่มข้อมูลบริษัท
-        data.update(company_data)
-        
-        # เพิ่มข้อมูลอื่น ๆ
-        data.update({
-            # ข้อมูลลูกค้า (ยังใช้ mock data)
+            'Companyname': company_data.get('Companyname', 'ไม่มีข้อมูล'),
+            'SiteAddress': company_data.get('SiteAddress', 'ไม่มีข้อมูล'),
+            'PhoneNumber': company_data.get('PhoneNumber', 'ไม่มีข้อมูล'),
+            'TaxId': company_data.get('TaxId', 'ไม่มีข้อมูล'),
+            'SitePicture': company_data.get('SitePicture', ''),
+            
+            # ข้อมูลลูกค้า
             'CustomerName': 'บริษัท XYZ จำกัด',
             'CustomerAddress': '456 ถนนรัชดาภิเษก แขวงห้วยขวาง เขตห้วยขวาง กรุงเทพฯ 10310',
             'PhoneMobile': '02-987-6543',
@@ -115,11 +138,11 @@ class BillingNoteGenerator:
             'TotalUnpaidAmount': '10,700.00',
             'TextThaiBaht': 'หนึ่งหมื่นเจ็ดร้อยบาทถ้วน',
             
-            # รายการเพิ่มเติม (ถ้ามี)
+            # รายการเพิ่มเติม
             'additionalItems': [
                 {
-                    'order': 2,  # เพิ่มลำดับ
-                    'type': 'ใบขาย',  # เปลี่ยนเป็น ใบแจ้งหนี้
+                    'order': 2,
+                    'type': 'ใบขาย',
                     'docNo': 'INV-2025-002',
                     'date': '12/01/2025',
                     'credit': '30',
@@ -129,10 +152,17 @@ class BillingNoteGenerator:
                     'unpaidAmount': '5,350.00'
                 }
             ]
-        })
+        }
+        
+        print("🎯 ข้อมูลที่จะส่งไปยัง Template (ตรวจสอบครั้งสุดท้าย):")
+        print(f"  Companyname: {data.get('Companyname')}")
+        print(f"  SiteAddress: {data.get('SiteAddress')}")
+        print(f"  PhoneNumber: {data.get('PhoneNumber')}")
+        print(f"  TaxId: {data.get('TaxId')}")
+        print(f"  SitePicture: {'[มีรูป]' if data.get('SitePicture') else '[ไม่มีรูป]'}\n")
         
         return data
-    
+
     def get_mock_company_data(self):
         """ข้อมูลบริษัทตัวอย่าง (fallback)"""
         return {
@@ -148,13 +178,27 @@ class BillingNoteGenerator:
         template_content = self.get_template()
         return self.processor.render_template(template_content, data)
     
-    def generate_pdf(self, data, output_path):
-        """สร้าง PDF จากข้อมูล"""
-        template_content = self.get_template()
-        return self.processor.export_to_pdf(template_content, data, output_path)
+    # def generate_pdf(self, data, output_path):
+    #     """สร้าง PDF จากข้อมูล"""
+    #     template_content = self.get_template()
+    #     return self.processor.export_to_pdf(template_content, data, output_path)
     
     def preview_in_browser(self, data):
         """แสดงตัวอย่างในเบราว์เซอร์"""
+        
+        # ⭐ เพิ่มส่วนนี้เพื่อ Debug
+        print("\n" + "="*60)
+        print("🔍 ตรวจสอบข้อมูลที่ส่งไปยัง Template:")
+        print("="*60)
+        print(f"Companyname: '{data.get('Companyname', 'ไม่มี')}'")
+        print(f"SiteAddress: '{data.get('SiteAddress', 'ไม่มี')}'")
+        print(f"PhoneNumber: '{data.get('PhoneNumber', 'ไม่มี')}'")
+        print(f"TaxId: '{data.get('TaxId', 'ไม่มี')}'")
+        print(f"SitePicture: '{data.get('SitePicture', 'ไม่มี')}'")
+        print("="*60)
+        print(f"CustomerName: '{data.get('CustomerName', 'ไม่มี')}'")
+        print("="*60 + "\n")
+        
         template_content = self.get_template()
         return self.processor.preview_in_browser(template_content, data)
     
@@ -209,9 +253,9 @@ class BillingNoteGenerator:
         """สร้างใบวางบิลจากข้อมูล Database"""
         return self.preview_in_browser(database_data)
     
-    def generate_pdf_from_database(self, database_data, output_path):
-        """สร้าง PDF จากข้อมูล Database"""
-        return self.generate_pdf(database_data, output_path)
+    # def generate_pdf_from_database(self, database_data, output_path):
+    #     """สร้าง PDF จากข้อมูล Database"""
+    #     return self.generate_pdf(database_data, output_path)
     
     @staticmethod
     def Preview_Template(template_type=None):
@@ -250,11 +294,11 @@ def create_billing_note_preview():
     sample_data = generator.create_sample_data()
     generator.preview_in_browser(sample_data)
 
-def create_billing_note_pdf(output_path="billing_note.pdf"):
-    """สร้างใบวางบิล PDF แบบง่าย ๆ"""
-    generator = BillingNoteGenerator()
-    sample_data = generator.create_sample_data()
-    return generator.generate_pdf(sample_data, output_path)
+# def create_billing_note_pdf(output_path="billing_note.pdf"):
+#     """สร้างใบวางบิล PDF แบบง่าย ๆ"""
+#     generator = BillingNoteGenerator()
+#     sample_data = generator.create_sample_data()
+#     return generator.generate_pdf(sample_data, output_path)
 
 def create_billing_from_data(data):
     """สร้างใบวางบิลจากข้อมูลที่ส่งมา"""
@@ -266,13 +310,6 @@ if __name__ == "__main__":
     print("=== Billing Note Generator ===")
     
     # แสดงตัวอย่างในเบราว์เซอร์
-    print("1. กำลังแสดงตัวอย่างในเบราว์เซอร์...")
+    print("กำลังแสดงตัวอย่างในเบราว์เซอร์...")
     create_billing_note_preview()
-    
-    # สร้าง PDF
-    print("2. กำลังสร้าง PDF...")
-    success = create_billing_note_pdf("sample_billing_note.pdf")
-    if success:
-        print("✅ สร้าง PDF สำเร็จ: sample_billing_note.pdf")
-    else:
-        print("❌ เกิดข้อผิดพลาดในการสร้าง PDF")
+    print("✅ เปิดเบราว์เซอร์สำเร็จ")

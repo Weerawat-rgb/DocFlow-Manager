@@ -1202,88 +1202,227 @@ class SalesBillUI:
     def prepare_template_data(self, billing_doc_no, customer_id, invoice_numbers):
         """เตรียมข้อมูลสำหรับ template"""
         try:
+            # ⭐ ดึงข้อมูลบริษัทจาก database
+            try:
+                from database_manager import get_company_data
+                company_data = get_company_data()
+            except:
+                company_data = {
+                    'Companyname': 'ไม่พบข้อมูลบริษัท',
+                    'SiteAddress': '',
+                    'PhoneNumber': '',
+                    'TaxId': '',
+                    'SitePicture': ''
+                }
+            
             # ดึงข้อมูลลูกค้าแบบละเอียด
             customer_detail = self.db.get_customer_detail(customer_id)
             
-            # คำนวณยอดรวม
+            # คำนวณยอดรวมและเตรียมรายการ
             total_amount = 0.0
-            invoice_items = []
+            first_item = None
+            additional_items = []
             
+            order = 1
             for item_id in self.selected_invoices:
                 if item_id in self.invoice_items:
                     invoice = self.invoice_items[item_id]
                     
-                    # แปลงข้อมูลวันที่
+                    # แปลงข้อมูลวันที่เป็น dd/mm/yyyy
                     invoice_date = invoice.get('InvoiceDate', '')[:10] if len(invoice.get('InvoiceDate', '')) > 10 else invoice.get('InvoiceDate', '')
+                    if invoice_date:
+                        try:
+                            date_obj = datetime.strptime(invoice_date, '%Y-%m-%d')
+                            invoice_date = date_obj.strftime('%d/%m/%Y')
+                        except:
+                            pass
+                    
                     due_date = invoice.get('DueDate', '')[:10] if len(invoice.get('DueDate', '')) > 10 else invoice.get('DueDate', '')
+                    if due_date:
+                        try:
+                            date_obj = datetime.strptime(due_date, '%Y-%m-%d')
+                            due_date = date_obj.strftime('%d/%m/%Y')
+                        except:
+                            pass
                     
                     try:
                         unpaid_amount = float(str(invoice.get('UnpaidAmount', '0')).replace(',', ''))
                         total_amount += unpaid_amount
+                        formatted_amount = f"{unpaid_amount:,.2f}"
                     except:
                         unpaid_amount = 0.0
+                        formatted_amount = "0.00"
                     
-                    invoice_items.append({
-                        'type': 'ใบแจ้งหนี้',
+                    item_data = {
+                        'order': order,  # ⭐ เพิ่ม order
+                        'type': 'ใบขาย',  # แก้เป็น "ใบขาย" ตาม template
                         'docNo': invoice.get('InvoiceNumber', ''),
                         'date': invoice_date,
                         'credit': str(invoice.get('MaxDueDate', '')),
                         'dueDate': due_date,
-                        'total': f"{unpaid_amount:,.2f}",
+                        'total': formatted_amount,
                         'paidAmount': '0.00',
-                        'unpaidAmount': f"{unpaid_amount:,.2f}"
-                    })
+                        'unpaidAmount': formatted_amount
+                    }
+                    
+                    if order == 1:
+                        first_item = item_data
+                    else:
+                        additional_items.append(item_data)
+                    
+                    order += 1
+            
+            # แปลงตัวเลขเป็นภาษาไทย
+            thai_baht_text = self.number_to_thai(total_amount)
             
             # เตรียมข้อมูลสำหรับ template
             template_data = {
                 'DocumentTitle': 'ใบวางบิลขาย',
                 
+                # ⭐ ข้อมูลบริษัท - ระบุชัดเจน
+                'Companyname': company_data.get('Companyname', 'ไม่พบข้อมูล'),
+                'SiteAddress': company_data.get('SiteAddress', 'ไม่พบข้อมูล'),
+                'PhoneNumber': company_data.get('PhoneNumber', 'ไม่พบข้อมูล'),
+                'TaxId': company_data.get('TaxId', 'ไม่พบข้อมูล'),
+                'SitePicture': company_data.get('SitePicture', ''),
+                
                 # ข้อมูลลูกค้า
                 'CustomerName': customer_detail.get('Name', ''),
                 'CustomerAddress': customer_detail.get('full_address', ''),
                 'PhoneMobile': customer_detail.get('PhoneMobile', ''),
-                'CustomerTaxNum': '',
+                'CustomerTaxNum': customer_detail.get('CustomerTaxNum', ''),
                 
                 # ข้อมูลเอกสาร
                 'DocNo': billing_doc_no,
                 'DocDate': datetime.now().strftime('%d/%m/%Y'),
                 
-                # ข้อมูลรายการแรก (ถ้ามี)
-                'InvoiceNumber': invoice_items[0]['docNo'] if invoice_items else '',
-                'InvoiceDate': invoice_items[0]['date'] if invoice_items else '',
-                'MaxDueDate': invoice_items[0]['credit'] if invoice_items else '',
-                'DueDate': invoice_items[0]['dueDate'] if invoice_items else '',
-                'Total': invoice_items[0]['total'] if invoice_items else '0.00',
+                # ข้อมูลรายการแรก
+                'InvoiceNumber': first_item['docNo'] if first_item else '',
+                'InvoiceDate': first_item['date'] if first_item else '',
+                'MaxDueDate': first_item['credit'] if first_item else '',
+                'DueDate': first_item['dueDate'] if first_item else '',
+                'Total': first_item['total'] if first_item else '0.00',
                 'PaidAmount': '0.00',
-                'UnpaidAmount': invoice_items[0]['unpaidAmount'] if invoice_items else '0.00',
+                'UnpaidAmount': first_item['unpaidAmount'] if first_item else '0.00',
                 
                 # ข้อมูลสรุป
                 'TotalUnpaidAmount': f"{total_amount:,.2f}",
-                'TextThaiBaht': self.convert_to_thai_text(total_amount),
+                'TextThaiBaht': thai_baht_text,
                 
-                # รายการเพิ่มเติม (ถ้ามีมากกว่า 1 รายการ)
-                'additionalItems': invoice_items[1:] if len(invoice_items) > 1 else []
+                # รายการเพิ่มเติม
+                'additionalItems': additional_items
             }
-            
-            return template_data
-            
+
+            # Debug
+            print("\n🔍 Final template_data:")
+            print(f"Companyname: {template_data.get('Companyname')}")
+            print(f"SiteAddress: {template_data.get('SiteAddress')}")
+            print(f"CustomerName: {template_data.get('CustomerName')}")
+            print()
+
+            return template_data           
         except Exception as e:
             print(f"Error preparing template data: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return {}
-
-    def convert_to_thai_text(self, amount):
-        """แปลงตัวเลขเป็นตัวอักษรไทย (ตัวอย่างง่าย ๆ)"""
+        
+    def number_to_thai(self, amount):
+        """แปลงตัวเลขเป็นตัวหนังสือภาษาไทย"""
         try:
-            # ตัวอย่างง่าย ๆ - ในการใช้งานจริงอาจต้องใช้ library
-            amount_int = int(amount)
-            if amount_int == 0:
-                return "ศูนยบาทถ้วน"
-            elif amount_int < 1000:
-                return f"(จำนวน {amount_int:,.0f} บาท)"
+            amount = float(amount)
+            
+            # ถ้าเป็นทศนิยม แปลงเป็นจำนวนเต็ม
+            baht = int(amount)
+            satang = int(round((amount - baht) * 100))
+            
+            # ตัวเลข
+            ones = ['', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า']
+            
+            def convert_group(num):
+                """แปลงเลขกลุ่ม 1-999"""
+                result = ''
+                
+                # หลักร้อย
+                hundred = num // 100
+                if hundred > 0:
+                    result += ones[hundred] + 'ร้อย'
+                
+                # หลักสิบ
+                ten = (num % 100) // 10
+                if ten > 0:
+                    if ten == 1:
+                        result += 'สิบ'
+                    elif ten == 2:
+                        result += 'ยี่สิบ'
+                    else:
+                        result += ones[ten] + 'สิบ'
+                
+                # หลักหนึ่ง
+                one = num % 10
+                if one > 0:
+                    if ten > 0 and one == 1:
+                        result += 'เอ็ด'
+                    else:
+                        result += ones[one]
+                
+                return result
+            
+            if baht == 0:
+                result = 'ศูนย์บาท'
             else:
-                return f"(จำนวน {amount_int:,.0f} บาท)"
-        except:
-            return f"(จำนวน {amount:,.0f} บาท)"
+                result = ''
+                
+                # ล้าน
+                million = baht // 1000000
+                if million > 0:
+                    result += convert_group(million) + 'ล้าน'
+                
+                # แสน + หมื่น + พัน
+                hundred_thousand = (baht % 1000000) // 100000
+                if hundred_thousand > 0:
+                    result += convert_group(hundred_thousand) + 'แสน'
+                
+                ten_thousand = (baht % 100000) // 10000
+                if ten_thousand > 0:
+                    result += convert_group(ten_thousand) + 'หมื่น'
+                
+                thousand = (baht % 10000) // 1000
+                if thousand > 0:
+                    result += convert_group(thousand) + 'พัน'
+                
+                # ร้อย + สิบ + หนึ่ง
+                remainder = baht % 1000
+                if remainder > 0:
+                    result += convert_group(remainder)
+                
+                result += 'บาท'
+            
+            # ส่วนสตางค์
+            if satang > 0:
+                result += convert_group(satang) + 'สตางค์'
+            else:
+                result += 'ถ้วน'
+            
+            return result
+            
+        except Exception as e:
+            return f'(จำนวนเงิน {amount:,.2f} บาท)'
+    
+        
+    # def convert_to_thai_text(self, amount):
+    #     """แปลงตัวเลขเป็นตัวอักษรไทย (ตัวอย่างง่าย ๆ)"""
+    #     try:
+    #         # ตัวอย่างง่าย ๆ - ในการใช้งานจริงอาจต้องใช้ library
+    #         amount_int = int(amount)
+    #         if amount_int == 0:
+    #             return "ศูนยบาทถ้วน"
+    #         elif amount_int < 1000:
+    #             return f"(จำนวน {amount_int:,.0f} บาท)"
+    #         else:
+    #             return f"(จำนวน {amount_int:,.0f} บาท)"
+    #     except:
+    #         return f"(จำนวน {amount:,.0f} บาท)"
                         
     def reset_form(self):
         self.selected_customer = None
