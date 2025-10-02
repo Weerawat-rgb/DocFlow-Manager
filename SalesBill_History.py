@@ -253,8 +253,8 @@ class SalesBillHistoryUI:
                 self.history_tree.delete(item)
             
             # Get date range
-            date_from = self.date_from.get_date().strftime('%Y-%m-%d')
-            date_to = self.date_to.get_date().strftime('%Y-%m-%d')
+            date_from = self.date_from.get_date().strftime('%Y-%m-%d') + ' 00:00:00'
+            date_to = self.date_to.get_date().strftime('%Y-%m-%d') + ' 23:59:59'
             
             billing_history = self.db.get_billing_history(date_from, date_to)
             
@@ -303,8 +303,8 @@ class SalesBillHistoryUI:
         search_term = self.search_entry.get().strip()
         
         try:
-            date_from = self.date_from.get_date().strftime('%Y-%m-%d')
-            date_to = self.date_to.get_date().strftime('%Y-%m-%d')
+            date_from = self.date_from.get_date().strftime('%Y-%m-%d') + ' 00:00:00'
+            date_to = self.date_to.get_date().strftime('%Y-%m-%d') + ' 23:59:59'
             
             # Clear existing data
             for item in self.history_tree.get_children():

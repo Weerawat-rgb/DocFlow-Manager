@@ -553,7 +553,7 @@ class SalesBillDatabase:
             print(f"❌ การเชื่อมต่อฐานข้อมูลมีปัญหา: {str(e)}")
             return False
         
-    def get_billing_history(self, date_from=None, date_to=None):
+    def get_billing_history(self, date_from, date_to):
         """ดึงประวัติใบวางบิลตามช่วงวันที่"""
         try:
             cursor = self.connection.cursor()
@@ -571,22 +571,11 @@ class SalesBillDatabase:
                     ELSE 'ใช้งาน'
                 END as Status
             FROM BillingDocument bd
-            WHERE 1=1
+            WHERE bd.CreateDate >= ? AND bd.CreateDate <= ?
+            ORDER BY bd.CreateDate DESC
             """
             
-            params = []
-            
-            if date_from:
-                query += " AND CAST(bd.CreateDate AS DATE) >= ?"
-                params.append(date_from)
-            
-            if date_to:
-                query += " AND CAST(bd.CreateDate AS DATE) <= ?"
-                params.append(date_to)
-            
-            query += " ORDER BY bd.CreateDate DESC"
-            
-            cursor.execute(query, params)
+            cursor.execute(query, (date_from, date_to))
             
             columns = [column[0] for column in cursor.description]
             results = []
@@ -598,9 +587,9 @@ class SalesBillDatabase:
             
         except Exception as e:
             print(f"Error getting billing history: {str(e)}")
-            return []    
-            
-    def search_billing_history(self, search_term: str, date_from: str, date_to: str) -> List[Dict]:
+            return []
+
+    def search_billing_history(self, search_term, date_from, date_to):
         """ค้นหาประวัติใบวางบิล"""
         try:
             cursor = self.connection.cursor()
@@ -613,15 +602,19 @@ class SalesBillDatabase:
                 TotalAmount,
                 TotalItems,
                 CreatedBy,
-                Status
+                CASE 
+                    WHEN Status = 'InActive' THEN 'ยกเลิกแล้ว'
+                    ELSE 'ใช้งาน'
+                END as Status
             FROM BillingDocument
-            WHERE CAST(CreateDate AS DATE) BETWEEN ? AND ?
+            WHERE CreateDate >= ? AND CreateDate <= ?
             AND (BillingDocNumber LIKE ? OR CustomerName LIKE ? OR CreatedBy LIKE ?)
             ORDER BY CreateDate DESC
             """
             
             search_pattern = f"%{search_term}%"
             cursor.execute(query, (date_from, date_to, search_pattern, search_pattern, search_pattern))
+            
             columns = [desc[0] for desc in cursor.description]
             results = []
             
@@ -632,9 +625,9 @@ class SalesBillDatabase:
             return results
             
         except Exception as e:
-            print(f"❌ การเชื่อมต่อฐานข้อมูลมีปัญหา: {str(e)}")
-            return False
-        
+            print(f"Error searching billing history: {str(e)}")
+            return []
+                
     def get_billing_detail(self, billing_doc_number: str) -> Dict:
         """ดึงรายละเอียดใบวางบิล"""
         try:

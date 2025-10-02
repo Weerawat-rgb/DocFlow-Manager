@@ -228,8 +228,8 @@ class PurchaseBillUI:
     def open_billing_history(self):
         """เปิดหน้าประวัติใบวางบิล"""
         try:
-            from SalesBill_History import SalesBillHistoryUI
-            SalesBillHistoryUI(self.window, self.user_data)
+            from PurchaseBill_History import PurchaseBillHistoryUI
+            PurchaseBillHistoryUI(self.window, self.user_data)
         except Exception as e:
             messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถเปิดหน้าประวัติได้: {str(e)}")
             print(f"Error opening history: {str(e)}")

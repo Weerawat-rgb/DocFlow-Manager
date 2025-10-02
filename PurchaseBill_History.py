@@ -50,27 +50,25 @@ class PurchaseBillHistoryUI:
         header_content = tk.Frame(header, bg='#1f2937')
         header_content.pack(fill='both', expand=True, padx=30, pady=15)
         
-        # Left - Title
         left_frame = tk.Frame(header_content, bg='#1f2937')
         left_frame.pack(side='left', fill='y')
         
-        tk.Label(left_frame, text="📋 ประวัติใบวางบิลซื้อ", 
+        tk.Label(left_frame, text="ประวัติใบวางบิลซื้อ", 
                 font=('Segoe UI', 18, 'bold'), 
                 fg='white', bg='#1f2937').pack(anchor='w')
         
-        tk.Label(left_frame, text="ดูประวัติและพิมพ์ซ้ำใบวางบิลซื้อ", 
+        tk.Label(left_frame, text="ดูประวัติและพิมพ์ซ้ำใบวางบิล", 
                 font=('Segoe UI', 9), 
                 fg='#d1d5db', bg='#1f2937').pack(anchor='w')
         
-        # Right - User info & Close button
         right_frame = tk.Frame(header_content, bg='#1f2937')
         right_frame.pack(side='right', fill='y')
         
-        tk.Label(right_frame, text=f"👤 {self.user_data['username']}", 
+        tk.Label(right_frame, text=f"{self.user_data['username']}", 
                font=('Segoe UI', 11), 
                fg='white', bg='#1f2937').pack(anchor='e')
         
-        close_btn = tk.Button(right_frame, text="✕ ปิดหน้าต่าง",
+        close_btn = tk.Button(right_frame, text="ปิดหน้าต่าง",
                              font=('Segoe UI', 9),
                              bg='#ef4444', fg='white',
                              border=0, padx=15, pady=6,
@@ -106,7 +104,7 @@ class PurchaseBillHistoryUI:
         self.search_entry.pack(side='left', fill='x', expand=True, padx=8, pady=6)
         self.search_entry.bind('<KeyRelease>', self.search_history)
         
-        search_btn = tk.Button(search_container, text="🔍",
+        search_btn = tk.Button(search_container, text="ค้นหา",
                               font=('Segoe UI', 10),
                               bg='#10b981', fg='white',
                               border=0, padx=8,
@@ -122,7 +120,6 @@ class PurchaseBillHistoryUI:
                 font=('Segoe UI', 10),
                 fg='#374151', bg='white').pack(side='left', padx=(0, 5))
 
-        # ⭐ เปลี่ยนจาก Entry เป็น DateEntry
         self.date_from = DateEntry(date_frame, 
                                 font=('Segoe UI', 10), 
                                 width=12,
@@ -149,7 +146,7 @@ class PurchaseBillHistoryUI:
         self.date_to.pack(side='left', padx=(0, 10))
         self.date_to.set_date(datetime.now())
 
-        refresh_btn = tk.Button(date_frame, text="🔄 รีเฟรช",
+        refresh_btn = tk.Button(date_frame, text="รีเฟรช",
                             font=('Segoe UI', 9),
                             bg='#3b82f6', fg='white',
                             border=0, padx=10, pady=4,
@@ -169,7 +166,7 @@ class PurchaseBillHistoryUI:
         style.configure("History.Treeview.Heading", 
                        font=('Segoe UI', 11, 'bold'))
         
-        columns = ('BillingDocNumber', 'CreateDate', 'CustomerName', 'TotalAmount', 'TotalItems', 'CreatedBy', 'Status')
+        columns = ('BillingDocNumber', 'CreateDate', 'SupplierName', 'TotalAmount', 'TotalItems', 'CreatedBy', 'Status')
         
         self.history_tree = ttk.Treeview(table_frame, columns=columns, show='headings', 
                                         style="History.Treeview")
@@ -178,7 +175,7 @@ class PurchaseBillHistoryUI:
         column_config = {
             'BillingDocNumber': {'text': 'เลขที่เอกสาร', 'width': 120, 'anchor': 'center'},
             'CreateDate': {'text': 'วันที่สร้าง', 'width': 120, 'anchor': 'center'},
-            'CustomerName': {'text': 'ชื่อลูกค้า', 'width': 200, 'anchor': 'w'},
+            'SupplierName': {'text': 'ชื่อซัพพลายเออร์', 'width': 200, 'anchor': 'w'},
             'TotalAmount': {'text': 'ยอดรวม (บาท)', 'width': 100, 'anchor': 'e'},
             'TotalItems': {'text': 'จำนวนรายการ', 'width': 100, 'anchor': 'center'},
             'CreatedBy': {'text': 'ผู้สร้าง', 'width': 100, 'anchor': 'center'},
@@ -197,7 +194,6 @@ class PurchaseBillHistoryUI:
         h_scrollbar = ttk.Scrollbar(table_frame, orient='horizontal', command=self.history_tree.xview)
         self.history_tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
         
-        # Pack table and scrollbars
         self.history_tree.pack(side='left', fill='both', expand=True)
         v_scrollbar.pack(side='right', fill='y')
         h_scrollbar.pack(side='bottom', fill='x')
@@ -210,11 +206,10 @@ class PurchaseBillHistoryUI:
         action_frame = tk.Frame(card, bg='white')
         action_frame.pack(fill='x')
         
-        # Left buttons
         left_buttons = tk.Frame(action_frame, bg='white')
         left_buttons.pack(side='left')
 
-        view_btn = tk.Button(left_buttons, text="👁️ ดูรายละเอียด",
+        view_btn = tk.Button(left_buttons, text="ดูรายละเอียด",
                             font=('Segoe UI', 10),
                             bg='#3b82f6', fg='white',
                             border=0, padx=15, pady=8,
@@ -222,7 +217,7 @@ class PurchaseBillHistoryUI:
                             command=self.view_details)
         view_btn.pack(side='left', padx=(0, 10))
 
-        print_btn = tk.Button(left_buttons, text="🖨️ พิมพ์ซ้ำ",
+        print_btn = tk.Button(left_buttons, text="พิมพ์ซ้ำ",
                             font=('Segoe UI', 10),
                             bg='#10b981', fg='white',
                             border=0, padx=15, pady=8,
@@ -230,8 +225,7 @@ class PurchaseBillHistoryUI:
                             command=self.reprint_document)
         print_btn.pack(side='left', padx=(0, 10))
 
-        # ⭐ เพิ่มปุ่ม Cancel
-        cancel_btn = tk.Button(left_buttons, text="🗑️ ยกเลิกใบวางบิล",
+        cancel_btn = tk.Button(left_buttons, text="ยกเลิกใบวางบิล",
                             font=('Segoe UI', 10),
                             bg='#ef4444', fg='white',
                             border=0, padx=15, pady=8,
@@ -239,7 +233,6 @@ class PurchaseBillHistoryUI:
                             command=self.cancel_document)
         cancel_btn.pack(side='left')
         
-        # Right info
         self.status_label = tk.Label(action_frame, text="เลือกรายการเพื่อดูรายละเอียด",
                                    font=('Segoe UI', 10),
                                    fg='#6b7280', bg='white')
@@ -248,25 +241,22 @@ class PurchaseBillHistoryUI:
     def load_billing_history(self):
         """โหลดประวัติใบวางบิล"""
         try:
-            # Clear existing data
             for item in self.history_tree.get_children():
                 self.history_tree.delete(item)
             
-            # Get date range
-            date_from = self.date_from.get_date().strftime('%Y-%m-%d')
-            date_to = self.date_to.get_date().strftime('%Y-%m-%d')
+            # ดึงวันที่และเพิ่มเวลา
+            date_from = self.date_from.get_date().strftime('%Y-%m-%d') + ' 00:00:00'
+            date_to = self.date_to.get_date().strftime('%Y-%m-%d') + ' 23:59:59'
             
             billing_history = self.db.get_billing_history(date_from, date_to)
             
             for billing in billing_history:
-                # Format date
                 create_date = billing.get('CreateDate', '')
                 if isinstance(create_date, datetime):
                     create_date_str = create_date.strftime('%d/%m/%Y')
                 else:
                     create_date_str = str(create_date)[:10] if create_date else ''
                 
-                # Format amount
                 try:
                     amount = float(billing.get('TotalAmount', 0))
                     amount_str = f"{amount:,.2f}"
@@ -275,38 +265,35 @@ class PurchaseBillHistoryUI:
                 
                 status = billing.get('Status', '')
                 
-                # ⭐ Insert และเก็บ item_id
                 item_id = self.history_tree.insert('', 'end', values=(
                     billing.get('BillingDocNumber', ''),
                     create_date_str,
-                    billing.get('CustomerName', ''),
+                    billing.get('SupplierName', ''),
                     amount_str,
                     billing.get('TotalItems', ''),
                     billing.get('CreatedBy', ''),
                     status
                 ))
                 
-                # ⭐ ถ้าสถานะเป็น "ยกเลิกแล้ว" ให้ระบายสีแดง
-                if status == 'ยกเลิกแล้ว':
+                if status == 'InActive':
                     self.history_tree.item(item_id, tags=('cancelled',))
             
-            # ⭐ กำหนดสีให้กับ tag (เพิ่มหลัง loop)
             self.history_tree.tag_configure('cancelled', foreground='#ef4444')
             
             self.status_label.config(text=f"โหลดข้อมูล {len(billing_history)} รายการ")
             
         except Exception as e:
             messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถโหลดประวัติได้: {str(e)}")
-        
+
     def search_history(self, event=None):
         """ค้นหาประวัติ"""
         search_term = self.search_entry.get().strip()
         
         try:
-            date_from = self.date_from.get_date().strftime('%Y-%m-%d')
-            date_to = self.date_to.get_date().strftime('%Y-%m-%d')
+            # ดึงวันที่และเพิ่มเวลา
+            date_from = self.date_from.get_date().strftime('%Y-%m-%d') + ' 00:00:00'
+            date_to = self.date_to.get_date().strftime('%Y-%m-%d') + ' 23:59:59'
             
-            # Clear existing data
             for item in self.history_tree.get_children():
                 self.history_tree.delete(item)
             
@@ -327,32 +314,28 @@ class PurchaseBillHistoryUI:
                 
                 status = billing.get('Status', '')
                 
-                # ⭐ Insert และเก็บ item_id
                 item_id = self.history_tree.insert('', 'end', values=(
                     billing.get('BillingDocNumber', ''),
                     create_date_str,
-                    billing.get('CustomerName', ''),
+                    billing.get('SupplierName', ''),
                     amount_str,
                     billing.get('TotalItems', ''),
                     billing.get('CreatedBy', ''),
                     status
                 ))
                 
-                # ⭐ ถ้าสถานะเป็น "ยกเลิกแล้ว" ให้ระบายสีแดง
-                if status == 'ยกเลิกแล้ว':
+                if status == 'InActive':
                     self.history_tree.item(item_id, tags=('cancelled',))
             
-            # ⭐ กำหนดสีให้กับ tag
             self.history_tree.tag_configure('cancelled', foreground='#ef4444')
             
             self.status_label.config(text=f"พบข้อมูล {len(billing_history)} รายการ")
             
         except Exception as e:
             messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถค้นหาได้: {str(e)}")
-                        
+                                    
     def on_item_select(self, event):
         """เมื่อเลือกรายการ"""
-        # ⭐ ใช้ after() เพื่อรอให้ selection เสร็จก่อน
         self.history_tree.after(10, self._update_selection)
 
     def _update_selection(self):
@@ -360,11 +343,11 @@ class PurchaseBillHistoryUI:
         selected_item = self.history_tree.selection()
         if selected_item:
             values = self.history_tree.item(selected_item[0])['values']
-            if values:  # ตรวจสอบว่ามีข้อมูล
+            if values:
                 billing_doc_number = values[0]
-                customer_name = values[2]
+                supplier_name = values[2]
                 self.selected_billing_doc = billing_doc_number
-                self.status_label.config(text=f"เลือก: {billing_doc_number} - {customer_name}")    
+                self.status_label.config(text=f"เลือก: {billing_doc_number} - {supplier_name}")    
                 
     def on_item_double_click(self, event):
         """เมื่อดับเบิลคลิก"""
@@ -380,7 +363,6 @@ class PurchaseBillHistoryUI:
             billing_detail = self.db.get_billing_detail(self.selected_billing_doc)
             billing_items = self.db.get_billing_items(self.selected_billing_doc)
             
-            # สร้างหน้าต่างรายละเอียด
             self.show_detail_window(billing_detail, billing_items)
             
         except Exception as e:
@@ -390,7 +372,7 @@ class PurchaseBillHistoryUI:
         """แสดงหน้าต่างรายละเอียด"""
         detail_window = tk.Toplevel(self.window)
         detail_window.title(f"รายละเอียดใบวางบิล - {billing_detail.get('BillingDocNumber', '')}")
-        detail_window.geometry("800x600")
+        detail_window.geometry("900x600")
         detail_window.configure(bg='white')
         
         # Header
@@ -401,7 +383,7 @@ class PurchaseBillHistoryUI:
                 font=('Segoe UI', 14, 'bold'),
                 fg='#1f2937', bg='#f0f9ff').pack(anchor='w')
         
-        tk.Label(header_frame, text=f"ลูกค้า: {billing_detail.get('CustomerName', '')}",
+        tk.Label(header_frame, text=f"ซัพพลายเออร์: {billing_detail.get('SupplierName', '')}",
                 font=('Segoe UI', 11),
                 fg='#374151', bg='#f0f9ff').pack(anchor='w', pady=(5, 0))
         
@@ -409,31 +391,33 @@ class PurchaseBillHistoryUI:
         content_frame = tk.Frame(detail_window, bg='white', padx=20, pady=15)
         content_frame.pack(fill='both', expand=True)
         
-        tk.Label(content_frame, text="รายการใบแจ้งหนี้",
+        tk.Label(content_frame, text="รายการใบรับสินค้า",
                 font=('Segoe UI', 12, 'bold'),
                 fg='#1f2937', bg='white').pack(anchor='w', pady=(0, 10))
         
         # Items treeview
-        items_columns = ('ItemOrder', 'InvoiceNumber', 'InvoiceDate', 'MaxDueDate', 'DueDate', 'UnpaidAmount')
+        items_columns = ('ItemOrder', 'ReceiveNumber', 'InvoiceNumber', 'ReceiveDate', 'CreditTerm', 'DueDate', 'UnpaidAmount')
         items_tree = ttk.Treeview(content_frame, columns=items_columns, show='headings', height=10)
         
         items_tree.heading('ItemOrder', text='ลำดับ', anchor='center')
-        items_tree.heading('InvoiceNumber', text='เลขที่ใบแจ้งหนี้', anchor='center')
-        items_tree.heading('InvoiceDate', text='วันที่ออกใบแจ้งหนี้', anchor='center')
-        items_tree.heading('MaxDueDate', text='ระยะเวลาชำระ', anchor='center')
+        items_tree.heading('ReceiveNumber', text='เลขที่ใบรับ', anchor='center')
+        items_tree.heading('InvoiceNumber', text='เลขที่ Invoice', anchor='center')
+        items_tree.heading('ReceiveDate', text='วันที่รับ', anchor='center')
+        items_tree.heading('CreditTerm', text='เครดิต', anchor='center')
         items_tree.heading('DueDate', text='วันครบกำหนด', anchor='center')
         items_tree.heading('UnpaidAmount', text='ยอดค้างชำระ', anchor='center')
         
         items_tree.column('ItemOrder', width=60, anchor='center')
-        items_tree.column('InvoiceNumber', width=120, anchor='center')
-        items_tree.column('InvoiceDate', width=100, anchor='center')
-        items_tree.column('MaxDueDate', width=80, anchor='center')
+        items_tree.column('ReceiveNumber', width=100, anchor='center')
+        items_tree.column('InvoiceNumber', width=100, anchor='center')
+        items_tree.column('ReceiveDate', width=100, anchor='center')
+        items_tree.column('CreditTerm', width=60, anchor='center')
         items_tree.column('DueDate', width=100, anchor='center')
         items_tree.column('UnpaidAmount', width=100, anchor='e')
         
         # Insert items
         for item in billing_items:
-            invoice_date = str(item.get('InvoiceDate', ''))[:10] if item.get('InvoiceDate') else ''
+            receive_date = str(item.get('ReceiveDate', ''))[:10] if item.get('ReceiveDate') else ''
             due_date = str(item.get('DueDate', ''))[:10] if item.get('DueDate') else ''
             
             try:
@@ -444,9 +428,10 @@ class PurchaseBillHistoryUI:
             
             items_tree.insert('', 'end', values=(
                 item.get('ItemOrder', ''),
+                item.get('ReceiveNumber', ''),
                 item.get('InvoiceNumber', ''),
-                invoice_date,
-                item.get('MaxDueDate', ''),
+                receive_date,
+                item.get('CreditTerm', ''),
                 due_date,
                 amount_str
             ))
@@ -478,15 +463,12 @@ class PurchaseBillHistoryUI:
             return
         
         try:
-            # ⭐ ตรวจสอบสถานะก่อนพิมพ์
             billing_detail = self.db.get_billing_detail(self.selected_billing_doc)
             
-            # ตรวจสอบว่ามีข้อมูลหรือไม่
             if not billing_detail:
                 messagebox.showerror("ข้อผิดพลาด", "ไม่พบข้อมูลเอกสาร")
                 return
             
-            # ตรวจสอบสถานะ
             status = billing_detail.get('Status', '')
             if status == 'InActive':
                 messagebox.showwarning(
@@ -495,13 +477,10 @@ class PurchaseBillHistoryUI:
                 )
                 return
             
-            # ถ้าสถานะปกติ ให้ดึงข้อมูลและพิมพ์
             billing_items = self.db.get_billing_items(self.selected_billing_doc)
             
-            # เตรียมข้อมูลสำหรับ template
             template_data = self.prepare_reprint_data(billing_detail, billing_items)
             
-            # เรียก BillingNoteGenerator
             from billing_note_generator import BillingNoteGenerator
             BillingNoteGenerator.Preview_Template_With_Data(template_data, 'purchase')
             
@@ -509,11 +488,12 @@ class PurchaseBillHistoryUI:
             messagebox.showerror("ข้อผิดพลาด", "ไม่พบ BillingNoteGenerator")
         except Exception as e:
             messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถพิมพ์ซ้ำได้: {str(e)}")
+            import traceback
+            traceback.print_exc()
                 
     def prepare_reprint_data(self, billing_detail, billing_items):
         """เตรียมข้อมูลสำหรับพิมพ์ซ้ำ"""
         
-        # ⭐ ดึงข้อมูลบริษัทจาก database
         try:
             from database_manager import get_company_data
             company_data = get_company_data()
@@ -526,22 +506,19 @@ class PurchaseBillHistoryUI:
                 'SitePicture': ''
             }
         
-        # คำนวณยอดรวม
         total_amount = billing_detail.get('TotalAmount', 0)
         
-        # เตรียมรายการ
         additional_items = []
         first_item = None
         
         for i, item in enumerate(billing_items):
-            invoice_date = str(item.get('InvoiceDate', ''))[:10] if item.get('InvoiceDate') else ''
+            receive_date = str(item.get('ReceiveDate', ''))[:10] if item.get('ReceiveDate') else ''
             due_date = str(item.get('DueDate', ''))[:10] if item.get('DueDate') else ''
             
-            # Format วันที่เป็น dd/mm/yyyy
-            if invoice_date:
+            if receive_date:
                 try:
-                    date_obj = datetime.strptime(invoice_date, '%Y-%m-%d')
-                    invoice_date = date_obj.strftime('%d/%m/%Y')
+                    date_obj = datetime.strptime(receive_date, '%Y-%m-%d')
+                    receive_date = date_obj.strftime('%d/%m/%Y')
                 except:
                     pass
             
@@ -553,17 +530,18 @@ class PurchaseBillHistoryUI:
                     pass
             
             try:
-                amount = float(item.get('UnpaidAmount', 0))
+                amount = float(item.get('Total', 0))
                 amount_str = f"{amount:,.2f}"
             except:
                 amount_str = "0.00"
             
             item_data = {
-                'order': i + 1,  # ⭐ เพิ่ม order
-                'type': 'ใบขาย',  # แก้เป็น "ใบขาย" ตาม template
-                'docNo': item.get('InvoiceNumber', ''),
-                'date': invoice_date,
-                'credit': str(item.get('MaxDueDate', '')),
+                'order': i + 1,
+                'type': 'ใบซื้อ',
+                'receiveNo': item.get('ReceiveNumber', ''),
+                'invoiceNo': item.get('InvoiceNumber', ''),
+                'date': receive_date,
+                'credit': str(item.get('CreditTerm', '')),
                 'dueDate': due_date,
                 'total': amount_str,
                 'paidAmount': '0.00',
@@ -575,7 +553,6 @@ class PurchaseBillHistoryUI:
             else:
                 additional_items.append(item_data)
         
-        # Format วันที่เอกสาร
         doc_date = str(billing_detail.get('CreateDate', ''))[:10] if billing_detail.get('CreateDate') else ''
         if doc_date:
             try:
@@ -584,44 +561,36 @@ class PurchaseBillHistoryUI:
             except:
                 pass
         
-        # แปลงตัวเลขเป็นภาษาไทย (ถ้ามี function)
         thai_baht_text = self.number_to_thai(total_amount)
         
-        # สร้างข้อมูลสำหรับ template
         template_data = {
-            'DocumentTitle': 'ใบวางบิลขาย',
+            'DocumentTitle': 'ใบวางบิลซื้อ',
             
-            # ⭐ ข้อมูลบริษัท
             'Companyname': company_data.get('Companyname', ''),
             'SiteAddress': company_data.get('SiteAddress', ''),
             'PhoneNumber': company_data.get('PhoneNumber', ''),
             'TaxId': company_data.get('TaxId', ''),
             'SitePicture': company_data.get('SitePicture', ''),
             
-            # ข้อมูลลูกค้า
-            'CustomerName': billing_detail.get('CustomerName', ''),
-            'CustomerAddress': billing_detail.get('CustomerAddress', ''),
-            'PhoneMobile': billing_detail.get('CustomerPhone', ''),
-            'CustomerTaxNum': billing_detail.get('CustomerTaxNum', ''),
+            'SupplierName': billing_detail.get('SupplierName', ''),
+            'SupplierAddress': billing_detail.get('SupplierAddress', ''),
+            'PhoneMobile': billing_detail.get('SupplierPhone', ''),
+            'SupplierTaxNum': billing_detail.get('SupplierTaxNum', ''),
             
-            # ข้อมูลเอกสาร
             'DocNo': billing_detail.get('BillingDocNumber', ''),
             'DocDate': doc_date,
             
-            # ข้อมูลรายการแรก
-            'InvoiceNumber': first_item['docNo'] if first_item else '',
-            'InvoiceDate': first_item['date'] if first_item else '',
-            'MaxDueDate': first_item['credit'] if first_item else '',
+            'ReceiveNumber': first_item['receiveNo'] if first_item else '',
+            'InvoiceNumber': first_item['invoiceNo'] if first_item else '',
+            'ReceiveDate': first_item['date'] if first_item else '',
+            'CreditTerm': first_item['credit'] if first_item else '',
             'DueDate': first_item['dueDate'] if first_item else '',
             'Total': first_item['total'] if first_item else '0.00',
             'PaidAmount': '0.00',
             'UnpaidAmount': first_item['unpaidAmount'] if first_item else '0.00',
-            
-            # ข้อมูลสรุป
             'TotalUnpaidAmount': f"{total_amount:,.2f}",
             'TextThaiBaht': thai_baht_text,
             
-            # รายการเพิ่มเติม
             'additionalItems': additional_items
         }
         
@@ -631,24 +600,17 @@ class PurchaseBillHistoryUI:
         """แปลงตัวเลขเป็นตัวหนังสือภาษาไทย"""
         try:
             amount = float(amount)
-            
-            # ถ้าเป็นทศนิยม แปลงเป็นจำนวนเต็ม
             baht = int(amount)
             satang = int(round((amount - baht) * 100))
             
-            # ตัวเลข
             ones = ['', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า']
             
             def convert_group(num):
-                """แปลงเลขกลุ่ม 1-999"""
                 result = ''
-                
-                # หลักร้อย
                 hundred = num // 100
                 if hundred > 0:
                     result += ones[hundred] + 'ร้อย'
                 
-                # หลักสิบ
                 ten = (num % 100) // 10
                 if ten > 0:
                     if ten == 1:
@@ -658,7 +620,6 @@ class PurchaseBillHistoryUI:
                     else:
                         result += ones[ten] + 'สิบ'
                 
-                # หลักหนึ่ง
                 one = num % 10
                 if one > 0:
                     if ten > 0 and one == 1:
@@ -673,12 +634,10 @@ class PurchaseBillHistoryUI:
             else:
                 result = ''
                 
-                # ล้าน
                 million = baht // 1000000
                 if million > 0:
                     result += convert_group(million) + 'ล้าน'
                 
-                # แสน + หมื่น + พัน
                 hundred_thousand = (baht % 1000000) // 100000
                 if hundred_thousand > 0:
                     result += convert_group(hundred_thousand) + 'แสน'
@@ -691,14 +650,12 @@ class PurchaseBillHistoryUI:
                 if thousand > 0:
                     result += convert_group(thousand) + 'พัน'
                 
-                # ร้อย + สิบ + หนึ่ง
                 remainder = baht % 1000
                 if remainder > 0:
                     result += convert_group(remainder)
                 
                 result += 'บาท'
             
-            # ส่วนสตางค์
             if satang > 0:
                 result += convert_group(satang) + 'สตางค์'
             else:
@@ -709,26 +666,18 @@ class PurchaseBillHistoryUI:
         except Exception as e:
             return f'(จำนวนเงิน {amount:,.2f} บาท)'
             
-    def close_window(self):
-        try:
-            self.db.close_connection()
-        except:
-            pass
-        self.window.destroy()
-        
     def cancel_document(self):
         """ยกเลิกใบวางบิล"""
         if not self.selected_billing_doc:
             messagebox.showwarning("คำเตือน", "กรุณาเลือกรายการที่ต้องการยกเลิก")
             return
         
-        # ยืนยันการยกเลิก
         response = messagebox.askyesno(
             "ยืนยันการยกเลิก",
             f"คุณต้องการยกเลิกใบวางบิล {self.selected_billing_doc} หรือไม่?\n\n"
             f"การยกเลิกจะทำให้:\n"
             f"• เอกสารใบวางบิลถูกปิดการใช้งาน\n"
-            f"• รายการใบแจ้งหนี้กลับมาเป็นสถานะ 'ยังไม่ได้วางบิล'\n\n"
+            f"• รายการใบรับสินค้ากลับมาเป็นสถานะ 'ยังไม่ได้วางบิล'\n\n"
             f"⚠️ การดำเนินการนี้ไม่สามารถย้อนกลับได้",
             icon='warning'
         )
@@ -737,16 +686,11 @@ class PurchaseBillHistoryUI:
             return
         
         try:
-            # เรียก method ยกเลิกจาก database
             success, message = self.db.cancel_billing_document(self.selected_billing_doc)
             
             if success:
                 messagebox.showinfo("สำเร็จ", message)
-                
-                # รีเฟรชข้อมูลในตาราง
                 self.load_billing_history()
-                
-                # เคลียร์การเลือก
                 self.selected_billing_doc = None
                 self.status_label.config(text="เลือกรายการเพื่อดูรายละเอียด")
             else:
@@ -754,8 +698,14 @@ class PurchaseBillHistoryUI:
                 
         except Exception as e:
             messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถยกเลิกได้: {str(e)}")
+            
+    def close_window(self):
+        try:
+            self.db.close_connection()
+        except:
+            pass
+        self.window.destroy()
 
-# สำหรับทดสอบ
 if __name__ == "__main__":
     root = tk.Tk()
     root.withdraw()

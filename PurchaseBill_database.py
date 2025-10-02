@@ -58,6 +58,7 @@ class PurchaseBillDatabase:
                     OR ISNULL(s.Address, '') LIKE ?
                     OR ISNULL(s.MobilePhone, '') LIKE ?
                 )
+                AND (r.Remarks IS NULL OR r.Remarks != N'วางบิลเรียบร้อยแล้ว')
                 GROUP BY s.SupplierId, s.SupplierName, s.Address, s.MobilePhone
                 HAVING COUNT(r.ReceiveNumber) > 0
                 ORDER BY s.SupplierName
@@ -75,7 +76,8 @@ class PurchaseBillDatabase:
                     SUM(r.Total) as TotalAmount
                 FROM Receive r
                 INNER JOIN Supplier s ON s.SupplierId = r.SupplierId
-                WHERE r.SupplierId != 0
+                WHERE r.SupplierId != 0 
+                AND (r.Remarks IS NULL OR r.Remarks != N'วางบิลเรียบร้อยแล้ว')
                 GROUP BY s.SupplierId, s.SupplierName, s.Address, s.MobilePhone
                 HAVING COUNT(r.ReceiveNumber) > 0
                 ORDER BY s.SupplierName
@@ -91,11 +93,11 @@ class PurchaseBillDatabase:
                 supplier['Acct'] = ''
                 results.append(supplier)
             
-            print(f"✅ พบซัพพลายเออร์ {len(results)} ราย")
+            print(f"พบซัพพลายเออร์ {len(results)} ราย")
             return results
             
         except Exception as e:
-            print(f"❌ ข้อผิดพลาด: {str(e)}")
+            print(f"ข้อผิดพลาด: {str(e)}")
             return []    
         
     def get_supplier_receives(self, supplier_id):
@@ -116,6 +118,7 @@ class PurchaseBillDatabase:
                 INNER JOIN Supplier s ON s.SupplierId = r.SupplierId
                 WHERE r.SupplierId = ?
                     AND r.SupplierId != 0
+                    AND (r.Remarks IS NULL OR r.Remarks != N'วางบิลเรียบร้อยแล้ว')
                 ORDER BY r.ReceiveDate DESC
             """
             
@@ -125,15 +128,15 @@ class PurchaseBillDatabase:
             receives = []
             for row in rows:
                 receives.append({
-                    'ReceiveId': row.ReceiveNumber,  # ใช้ ReceiveNumber แทน
+                    'ReceiveId': row.ReceiveNumber,
                     'ReceiveNumber': row.ReceiveNumber,
                     'InvoiceNumber': row.InvoiceNumber,
                     'ReceiveDate': str(row.ReceiveDate)[:10] if row.ReceiveDate else '',
                     'MaxDueDate': row.CreditTerm or 0,
                     'DueDate': str(row.DueDate)[:10] if row.DueDate else '',
                     'Total': float(row.Total) if row.Total else 0.0,
-                    'PaidAmount': 0.0,  # ไม่มีในตาราง
-                    'UnpaidAmount': float(row.Total) if row.Total else 0.0  # ใช้ Total เป็นยอดค้าง
+                    'PaidAmount': 0.0,
+                    'UnpaidAmount': float(row.Total) if row.Total else 0.0
                 })
             
             print(f"พบใบรับสินค้า {len(receives)} รายการ")
@@ -141,8 +144,7 @@ class PurchaseBillDatabase:
             
         except Exception as e:
             print(f"ข้อผิดพลาดในการดึงใบรับสินค้า: {str(e)}")
-            return []
-                                                
+            return []                                                
     def get_supplier_detail(self, supplier_id: int) -> Dict:
         """ดึงข้อมูลซัพพลายเออร์แบบละเอียด"""
         try:
@@ -364,198 +366,86 @@ class PurchaseBillDatabase:
             traceback.print_exc()
             return None
                     
-    # ใช้ methods เดิมจาก SalesBill_database.py
-    def get_billing_history(self, date_from=None, date_to=None):
-        """ดึงประวัติใบวางบิลซื้อ"""
+    def get_billing_history(self, date_from, date_to):
+        """ดึงประวัติใบวางบิล"""
         try:
-            cursor = self.connection.cursor()
-            
             query = """
-            SELECT 
-                bd.BillingDocNumber,
-                bd.CreateDate,
-                bd.CustomerName,
-                bd.TotalAmount,
-                bd.TotalItems,
-                bd.CreatedBy,
-                CASE 
-                    WHEN bd.Status = 'InActive' THEN 'ยกเลิกแล้ว'
-                    ELSE 'ใช้งาน'
-                END as Status
-            FROM BillingDocument bd
-            WHERE BillingDocNumber LIKE 'PUR%'
+                SELECT 
+                    BillingDocNumber,
+                    SupplierName,
+                    CreateDate,
+                    TotalItems,
+                    TotalAmount,
+                    Status,
+                    CreatedBy
+                FROM PurchaseBillingDocument
+                WHERE CreateDate >= ? AND CreateDate <= ?
+                ORDER BY CreateDate DESC
             """
             
-            params = []
+            self.cursor.execute(query, (date_from, date_to))
+            rows = self.cursor.fetchall()
             
-            if date_from:
-                query += " AND CAST(bd.CreateDate AS DATE) >= ?"
-                params.append(date_from)
-            
-            if date_to:
-                query += " AND CAST(bd.CreateDate AS DATE) <= ?"
-                params.append(date_to)
-            
-            query += " ORDER BY bd.CreateDate DESC"
-            
-            cursor.execute(query, params)
-            
-            columns = [column[0] for column in cursor.description]
             results = []
-            
-            for row in cursor.fetchall():
-                results.append(dict(zip(columns, row)))
+            for row in rows:
+                results.append({
+                    'BillingDocNumber': row.BillingDocNumber,
+                    'SupplierName': row.SupplierName,
+                    'CreateDate': row.CreateDate,
+                    'TotalItems': row.TotalItems,
+                    'TotalAmount': float(row.TotalAmount) if row.TotalAmount else 0.0,
+                    'Status': row.Status,
+                    'CreatedBy': row.CreatedBy
+                })
             
             return results
             
         except Exception as e:
-            print(f"Error getting billing history: {str(e)}")
+            print(f"Error: {str(e)}")
             return []
-    
-    def search_billing_history(self, search_term: str, date_from: str, date_to: str):
-        """ค้นหาประวัติใบวางบิลซื้อ"""
+
+    def search_billing_history(self, search_term, date_from, date_to):
+        """ค้นหาประวัติใบวางบิล"""
         try:
-            cursor = self.connection.cursor()
-            
             query = """
-            SELECT 
-                BillingDocNumber,
-                CreateDate,
-                CustomerName,
-                TotalAmount,
-                TotalItems,
-                CreatedBy,
-                Status
-            FROM BillingDocument
-            WHERE BillingDocNumber LIKE 'PUR%'
-            AND CAST(CreateDate AS DATE) BETWEEN ? AND ?
-            AND (BillingDocNumber LIKE ? OR CustomerName LIKE ? OR CreatedBy LIKE ?)
-            ORDER BY CreateDate DESC
+                SELECT 
+                    BillingDocNumber,
+                    SupplierName,
+                    CreateDate,
+                    TotalItems,
+                    TotalAmount,
+                    Status,
+                    CreatedBy
+                FROM PurchaseBillingDocument
+                WHERE CreateDate >= ? AND CreateDate <= ?
+                    AND (BillingDocNumber LIKE ? 
+                    OR SupplierName LIKE ? 
+                    OR CreatedBy LIKE ?)
+                ORDER BY CreateDate DESC
             """
             
-            search_pattern = f"%{search_term}%"
-            cursor.execute(query, (date_from, date_to, search_pattern, search_pattern, search_pattern))
+            search_pattern = f'%{search_term}%'
+            self.cursor.execute(query, (date_from, date_to, search_pattern, search_pattern, search_pattern))
+            rows = self.cursor.fetchall()
             
-            columns = [desc[0] for desc in cursor.description]
             results = []
-            
-            for row in cursor.fetchall():
-                results.append(dict(zip(columns, row)))
+            for row in rows:
+                results.append({
+                    'BillingDocNumber': row.BillingDocNumber,
+                    'SupplierName': row.SupplierName,
+                    'CreateDate': row.CreateDate,
+                    'TotalItems': row.TotalItems,
+                    'TotalAmount': float(row.TotalAmount) if row.TotalAmount else 0.0,
+                    'Status': row.Status,
+                    'CreatedBy': row.CreatedBy
+                })
             
             return results
             
         except Exception as e:
-            print(f"Error searching billing history: {str(e)}")
+            print(f"Error: {str(e)}")
             return []
-    
-    def get_billing_detail(self, billing_doc_number: str):
-        """ดึงรายละเอียดใบวางบิลซื้อ"""
-        try:
-            cursor = self.connection.cursor()
             
-            query = """
-            SELECT 
-                BillingDocNumber,
-                CustomerId,
-                CustomerName,
-                CustomerAddress,
-                CustomerPhone,
-                CreateDate,
-                CreatedBy,
-                TotalAmount,
-                TotalItems,
-                Status,
-                Notes
-            FROM BillingDocument
-            WHERE BillingDocNumber = ?
-            """
-            
-            cursor.execute(query, (billing_doc_number,))
-            columns = [desc[0] for desc in cursor.description]
-            row = cursor.fetchone()
-            
-            if row:
-                return dict(zip(columns, row))
-            
-            return {}
-            
-        except Exception as e:
-            print(f"Error getting billing detail: {str(e)}")
-            return {}
-    
-    def get_billing_items(self, billing_doc_number: str):
-        """ดึงรายการใบรับสินค้าในใบวางบิลซื้อ"""
-        try:
-            cursor = self.connection.cursor()
-            
-            query = """
-            SELECT 
-                bdi.ItemOrder,
-                bdi.InvoiceNumber,
-                bdi.InvoiceDate,
-                bdi.MaxDueDate,
-                bdi.DueDate,
-                bdi.Total,
-                bdi.PaidAmount,
-                bdi.UnpaidAmount,
-                bdi.InvoiceAmount
-            FROM BillingDocumentItem bdi
-            INNER JOIN BillingDocument bd ON bd.BillingDocId = bdi.BillingDocId
-            WHERE bd.BillingDocNumber = ?
-            ORDER BY bdi.ItemOrder
-            """
-            
-            cursor.execute(query, (billing_doc_number,))
-            columns = [desc[0] for desc in cursor.description]
-            results = []
-            
-            for row in cursor.fetchall():
-                results.append(dict(zip(columns, row)))
-            
-            return results
-            
-        except Exception as e:
-            print(f"Error getting billing items: {str(e)}")
-            return []
-    
-    def cancel_billing_document(self, billing_doc_number):
-        """ยกเลิกใบวางบิลซื้อ"""
-        try:
-            cursor = self.connection.cursor()
-            
-            cursor.execute("""
-                SELECT bdi.InvoiceNumber 
-                FROM BillingDocumentItem bdi
-                INNER JOIN BillingDocument bd ON bd.BillingDocId = bdi.BillingDocId
-                WHERE bd.BillingDocNumber = ?
-            """, (billing_doc_number,))
-            
-            receive_numbers = [row[0] for row in cursor.fetchall()]
-            
-            if not receive_numbers:
-                return False, "ไม่พบรายการใบรับสินค้าในเอกสารนี้"
-            
-            cursor.execute("""
-                UPDATE BillingDocument 
-                SET Status = 'InActive'
-                WHERE BillingDocNumber = ?
-            """, (billing_doc_number,))
-            
-            placeholders = ','.join(['?' for _ in receive_numbers])
-            cursor.execute(f"""
-                UPDATE Receive 
-                SET Status = 0
-                WHERE ReceiveNumber IN ({placeholders})
-            """, receive_numbers)
-            
-            self.connection.commit()
-            
-            return True, f"ยกเลิกสำเร็จ: คืนสถานะ {len(receive_numbers)} รายการ"
-            
-        except Exception as e:
-            self.connection.rollback()
-            return False, f"เกิดข้อผิดพลาด: {str(e)}"
-    
     def test_connection(self):
         """ทดสอบการเชื่อมต่อฐานข้อมูล"""
         try:
@@ -619,3 +509,196 @@ class PurchaseBillDatabase:
             print("✅ ปิดการเชื่อมต่อฐานข้อมูล")
         except Exception as e:
             print(f"❌ ข้อผิดพลาดในการปิดการเชื่อมต่อ: {str(e)}")
+            
+    def get_billing_history(self, date_from, date_to):
+        """ดึงประวัติใบวางบิล"""
+        try:
+            query = """
+                SELECT 
+                    BillingDocNumber,
+                    SupplierName,
+                    CreateDate,
+                    TotalItems,
+                    TotalAmount,
+                    Status,
+                    CreatedBy
+                FROM PurchaseBillingDocument
+                WHERE CreateDate BETWEEN ? AND ?
+                ORDER BY CreateDate DESC
+            """
+            
+            self.cursor.execute(query, (date_from, date_to))
+            rows = self.cursor.fetchall()
+            
+            results = []
+            for row in rows:
+                results.append({
+                    'BillingDocNumber': row.BillingDocNumber,
+                    'SupplierName': row.SupplierName,
+                    'CreateDate': row.CreateDate,
+                    'TotalItems': row.TotalItems,
+                    'TotalAmount': float(row.TotalAmount) if row.TotalAmount else 0.0,
+                    'Status': row.Status,
+                    'CreatedBy': row.CreatedBy
+                })
+            
+            return results
+            
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            return []
+
+
+    def get_billing_detail(self, billing_doc_no):
+        """ดึงรายละเอียดใบวางบิล"""
+        try:
+            query = """
+                SELECT * 
+                FROM PurchaseBillingDocument
+                WHERE BillingDocNumber = ?
+            """
+            
+            self.cursor.execute(query, (billing_doc_no,))
+            row = self.cursor.fetchone()
+            
+            if row:
+                return {
+                    'BillingDocNumber': row.BillingDocNumber,
+                    'SupplierName': row.SupplierName,
+                    'SupplierAddress': row.SupplierAddress,
+                    'SupplierPhone': row.SupplierPhone,
+                    'SupplierTaxNum': getattr(row, 'SupplierTaxNum', ''),
+                    'CreateDate': row.CreateDate,
+                    'TotalAmount': float(row.TotalAmount) if row.TotalAmount else 0.0,
+                    'TotalItems': row.TotalItems,
+                    'Status': row.Status,
+                    'CreatedBy': row.CreatedBy,
+                    'Notes': row.Notes
+                }
+            
+            return None
+            
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            return None
+
+    def get_billing_items(self, billing_doc_no):
+        """ดึงรายการในใบวางบิล"""
+        try:
+            query = """
+                SELECT 
+                    i.ReceiveNumber,
+                    i.InvoiceNumber,
+                    i.ReceiveDate,
+                    i.CreditTerm,
+                    i.DueDate,
+                    i.Total,
+                    i.PaidAmount,
+                    i.UnpaidAmount,
+                    i.ItemOrder
+                FROM PurchaseBillingDocumentItem i
+                INNER JOIN PurchaseBillingDocument d ON d.PurchaseBillingDocId = i.PurchaseBillingDocId
+                WHERE d.BillingDocNumber = ?
+                ORDER BY i.ItemOrder
+            """
+            
+            self.cursor.execute(query, (billing_doc_no,))
+            rows = self.cursor.fetchall()
+            
+            results = []
+            for row in rows:
+                results.append({
+                    'ReceiveNumber': row.ReceiveNumber,
+                    'InvoiceNumber': row.InvoiceNumber,
+                    'ReceiveDate': row.ReceiveDate,
+                    'CreditTerm': row.CreditTerm,
+                    'DueDate': row.DueDate,
+                    'Total': float(row.Total) if row.Total else 0.0,
+                    'PaidAmount': float(row.PaidAmount) if row.PaidAmount else 0.0,
+                    'UnpaidAmount': float(row.UnpaidAmount) if row.UnpaidAmount else 0.0,
+                    'ItemOrder': row.ItemOrder
+                })
+            
+            return results
+            
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            return []
+
+    def cancel_billing_document(self, billing_doc_no):
+        """ยกเลิกใบวางบิล"""
+        try:
+            # อัพเดทสถานะเป็น InActive
+            query1 = """
+                UPDATE PurchaseBillingDocument 
+                SET Status = 'InActive', UpdatedDate = GETDATE()
+                WHERE BillingDocNumber = ?
+            """
+            self.cursor.execute(query1, (billing_doc_no,))
+            
+            # อัพเดท Remarks ของ Receive กลับเป็นว่าง
+            query2 = """
+                UPDATE Receive 
+                SET Remarks = NULL
+                WHERE ReceiveNumber IN (
+                    SELECT i.ReceiveNumber
+                    FROM PurchaseBillingDocumentItem i
+                    INNER JOIN PurchaseBillingDocument d ON d.PurchaseBillingDocId = i.PurchaseBillingDocId
+                    WHERE d.BillingDocNumber = ?
+                )
+            """
+            self.cursor.execute(query2, (billing_doc_no,))
+            
+            self.connection.commit()
+            
+            return True, f"ยกเลิกใบวางบิล {billing_doc_no} สำเร็จ"
+            
+        except Exception as e:
+            self.connection.rollback()
+            return False, f"ไม่สามารถยกเลิกได้: {str(e)}"
+                
+
+        """ดึงรายการในใบวางบิล"""
+        try:
+            query = """
+                SELECT 
+                    ReceiveNumber,
+                    InvoiceNumber,
+                    ReceiveDate,
+                    CreditTerm,
+                    DueDate,
+                    Total,
+                    PaidAmount,
+                    UnpaidAmount,
+                    ItemOrder
+                FROM PurchaseBillingDocumentItem
+                WHERE PurchaseBillingDocId = (
+                    SELECT PurchaseBillingDocId 
+                    FROM PurchaseBillingDocument 
+                    WHERE BillingDocNumber = ?
+                )
+                ORDER BY ItemOrder
+            """
+            
+            self.cursor.execute(query, (billing_doc_id,))
+            rows = self.cursor.fetchall()
+            
+            results = []
+            for row in rows:
+                results.append({
+                    'ReceiveNumber': row.ReceiveNumber,
+                    'InvoiceNumber': row.InvoiceNumber,
+                    'ReceiveDate': str(row.ReceiveDate) if row.ReceiveDate else '',
+                    'CreditTerm': row.CreditTerm,
+                    'DueDate': str(row.DueDate) if row.DueDate else '',
+                    'Total': float(row.Total) if row.Total else 0.0,
+                    'PaidAmount': float(row.PaidAmount) if row.PaidAmount else 0.0,
+                    'UnpaidAmount': float(row.UnpaidAmount) if row.UnpaidAmount else 0.0,
+                    'ItemOrder': row.ItemOrder
+                })
+            
+            return results
+            
+        except Exception as e:
+            print(f"Error getting billing items: {str(e)}")
+            return []
