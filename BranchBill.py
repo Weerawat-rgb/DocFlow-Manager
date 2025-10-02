@@ -1,9 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
-from SalesBill_database import SalesBillDatabase
+from BranchBill_database import BranchBillDatabase
 
-class SalesBillUI:
+class BranchBillUI:
     def __init__(self, parent, user_data):
         self.parent = parent
         self.user_data = user_data
@@ -11,23 +11,19 @@ class SalesBillUI:
         
         # Initialize variables first
         self.current_step = 1
-        self.selected_customer = None
-        self.selected_invoices = set()  
-        self.selected_invoice_numbers = set() 
+        self.selected_branch = None
+        self.selected_withdrawals = set()  
+        self.selected_withdrawal_numbers = set() 
         
         self.setup_window()
         
         # Initialize database
         try:
-            self.db = SalesBillDatabase()
+            self.db = BranchBillDatabase()
             if not self.db.test_connection():
                 messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถเชื่อมต่อฐานข้อมูลได้")
                 self.window.destroy()
                 return
-            
-            # ทดสอบข้อมูล
-            print("🔍 ทดสอบข้อมูลในฐานข้อมูล...")
-            self.db.test_data()
             
         except Exception as e:
             messagebox.showerror("ข้อผิดพลาด", f"ข้อผิดพลาดฐานข้อมูล: {str(e)}")
@@ -37,7 +33,7 @@ class SalesBillUI:
         self.show_step1()
         
     def setup_window(self):
-        self.window.title("ระบบใบวางบิลขาย - DocFlow Manager")
+        self.window.title("ระบบใบวางบิลสาขา - DocFlow Manager")
         self.window.geometry("1400x900")
         self.window.configure(bg='#f8fafc')
         self.center_window()
@@ -63,11 +59,11 @@ class SalesBillUI:
         left_frame = tk.Frame(header_content, bg='#1f2937')
         left_frame.pack(side='left', fill='y')
         
-        tk.Label(left_frame, text="🛒 ระบบใบวางบิลขาย", 
+        tk.Label(left_frame, text="🏢 ระบบใบวางบิลสาขา", 
                 font=('Segoe UI', 18, 'bold'), 
                 fg='white', bg='#1f2937').pack(anchor='w')
         
-        tk.Label(left_frame, text="จัดการใบวางบิลการขายสินค้า", 
+        tk.Label(left_frame, text="จัดการใบวางบิลการโอนสินค้าไปสาขา", 
                 font=('Segoe UI', 9), 
                 fg='#d1d5db', bg='#1f2937').pack(anchor='w')
         
@@ -105,8 +101,8 @@ class SalesBillUI:
         
         steps = [
             {"num": 1, "text": "สร้างเอกสาร"},
-            {"num": 2, "text": "ค้นหาลูกค้า"},
-            {"num": 3, "text": "เลือกใบแจ้งหนี้"},
+            {"num": 2, "text": "ค้นหาสาขา"},
+            {"num": 3, "text": "เลือกใบเบิกโอน"},
             {"num": 4, "text": "ตรวจสอบและยืนยัน"}
         ]
         
@@ -142,22 +138,20 @@ class SalesBillUI:
                         font=('Segoe UI', 16),
                         fg='#d1d5db', bg='white').pack(side='left', padx=(10, 0))
                 
-    def sync_selected_invoices(self):
+    def sync_selected_withdrawals(self):
         """ซิงค์ข้อมูลการเลือกให้เป็นปัจจุบัน"""
-        if not hasattr(self, 'selected_invoice_numbers'):
-            self.selected_invoice_numbers = set()
+        if not hasattr(self, 'selected_withdrawal_numbers'):
+            self.selected_withdrawal_numbers = set()
         else:
-            # ล้างข้อมูลเก่า
-            self.selected_invoice_numbers.clear()
+            self.selected_withdrawal_numbers.clear()
         
-        # เก็บข้อมูลใหม่จากที่เลือกปัจจุบัน
-        for item_id in self.selected_invoices:
-            if item_id in self.invoice_items:
-                invoice_number = self.invoice_items[item_id].get('InvoiceNumber', '')
-                if invoice_number:
-                    self.selected_invoice_numbers.add(invoice_number)
+        for item_id in self.selected_withdrawals:
+            if item_id in self.withdrawal_items:
+                withdrawal_number = self.withdrawal_items[item_id].get('WithdrawalNumber', '')
+                if withdrawal_number:
+                    self.selected_withdrawal_numbers.add(withdrawal_number)
         
-        print(f"Synced selected invoices: {self.selected_invoice_numbers}")
+        print(f"Synced selected withdrawals: {self.selected_withdrawal_numbers}")
     
     def clear_content(self):
         for widget in self.window.winfo_children():
@@ -177,7 +171,7 @@ class SalesBillUI:
         card.pack(expand=True, fill='both')
         
         # Title
-        tk.Label(card, text="เริ่มสร้างใบวางบิลขาย",
+        tk.Label(card, text="เริ่มสร้างใบวางบิลสาขา",
                 font=('Segoe UI', 20, 'bold'),
                 fg='#1f2937', bg='white').pack(pady=(0, 10))
         
@@ -190,7 +184,7 @@ class SalesBillUI:
         icon_frame.pack(pady=(0, 40))
         icon_frame.pack_propagate(False)
         
-        tk.Label(icon_frame, text="📄",
+        tk.Label(icon_frame, text="🏢",
                 font=('Segoe UI Emoji', 48),
                 fg='white', bg='#10b981').pack(expand=True)
         
@@ -199,7 +193,7 @@ class SalesBillUI:
         buttons_frame.pack()
         
         # Start button
-        start_btn = tk.Button(buttons_frame, text="สร้างใบวางบิลขาย",
+        start_btn = tk.Button(buttons_frame, text="สร้างใบวางบิลสาขา",
                             font=('Segoe UI', 14, 'bold'),
                             bg='#10b981', fg='white',
                             activebackground='#059669',
@@ -228,8 +222,8 @@ class SalesBillUI:
     def open_billing_history(self):
         """เปิดหน้าประวัติใบวางบิล"""
         try:
-            from SalesBill_History import SalesBillHistoryUI
-            SalesBillHistoryUI(self.window, self.user_data)
+            from BranchBill_History import BranchBillHistoryUI
+            BranchBillHistoryUI(self.window, self.user_data)
         except Exception as e:
             messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถเปิดหน้าประวัติได้: {str(e)}")
             print(f"Error opening history: {str(e)}")
@@ -247,11 +241,11 @@ class SalesBillUI:
         card.pack(expand=True, fill='both')
         
         # Title
-        tk.Label(card, text="ค้นหาลูกค้า",
+        tk.Label(card, text="ค้นหาสาขา",
                 font=('Segoe UI', 16, 'bold'),
                 fg='#1f2937', bg='white').pack(pady=(0, 5))
         
-        tk.Label(card, text="ป้อนชื่อบริษัทหรือเลขประจำตัวผู้เสียภาษี",
+        tk.Label(card, text="ป้อนชื่อสาขาที่ต้องการ",
                 font=('Segoe UI', 10),
                 fg='#6b7280', bg='white').pack(pady=(0, 15))
         
@@ -266,15 +260,15 @@ class SalesBillUI:
                                     bg='#f9fafb', fg='#374151',
                                     border=0, insertbackground='#10b981')
         self.search_entry.pack(side='left', fill='x', expand=True, padx=10, pady=8)
-        self.search_entry.bind('<KeyRelease>', self.search_customers)
-        self.search_entry.bind('<Return>', self.search_customers)
+        self.search_entry.bind('<KeyRelease>', self.search_branches)
+        self.search_entry.bind('<Return>', self.search_branches)
         
         search_btn = tk.Button(search_container, text="ค้นหา",
                             font=('Segoe UI', 10),
                             bg='#10b981', fg='white',
                             border=0, padx=12,
                             cursor='hand2',
-                            command=self.search_customers)
+                            command=self.search_branches)
         search_btn.pack(side='right', fill='y')
         
         # Results frame
@@ -293,10 +287,11 @@ class SalesBillUI:
                             command=self.show_step1)
         back_btn.pack(side='left')
         
-        # Load initial customers
-        self.search_customers()
-                    
-    def search_customers(self, event=None):
+        # Load initial branches
+        self.search_branches()
+                            
+    def search_branches(self, event=None):
+        """ค้นหาสาขา"""
         search_term = self.search_entry.get().strip()
         
         # Show loading
@@ -308,73 +303,38 @@ class SalesBillUI:
                             fg='#6b7280', bg='white')
         loading_label.pack(expand=True)
         
-        # Update window to show loading
         self.window.update_idletasks()
         
         try:
-            customers = self.db.search_customers(search_term)
+            branches = self.db.search_branches(search_term)
             
-            # แสดงผลตามที่ค้นหาเจอจริง ๆ
-            print(f"🔍 Search term: '{search_term}' -> Found: {len(customers)} customers")
+            print(f"🔍 Search term: '{search_term}' -> Found: {len(branches)} branches")
             
-            self.display_customers(customers)
+            self.display_branches(branches)
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถค้นหาลูกค้าได้: {str(e)}")
-            self.display_customers([])
-            
-    def select_from_tree(self):
-        """เลือกลูกค้าจากตาราง"""
-        selected_item = self.customer_tree.selection()
-        if not selected_item:
-            messagebox.showwarning("คำเตือน", "กรุณาเลือกลูกค้าจากตาราง")
-            return
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถค้นหาสาขาได้: {str(e)}")
+            self.display_branches([])
         
-        # Get selected data
-        values = self.customer_tree.item(selected_item[0])['values']
+    def select_branch(self, branch):
+        """เลือกสาขา"""
+        self.selected_branch = branch
         
-        # Create customer dict
-        customer = {
-            'CustomerId': values[0],
-            'Acct': values[1],
-            'Name': values[2],
-            'CustomerName': values[3],
-            'CustomerAddress': values[4],
-            'PhoneMobile': values[5],
-            'CustomerTaxNum': values[6]
-        }
+        branch_name = branch.get('BranchName', '').strip()
+        if not branch_name:
+            branch_name = "สาขา (ไม่ระบุชื่อ)"
         
-        self.selected_customer = customer
-        
-        # แสดงชื่อลูกค้าที่เลือก
-        customer_display_name = customer.get('CustomerName', '').strip()
-        if not customer_display_name:
-            customer_display_name = customer.get('Name', '').strip()
-        if not customer_display_name:
-            customer_display_name = f"ลูกค้า ID: {customer.get('CustomerId', 'N/A')}"
-            
-        messagebox.showinfo("สำเร็จ", f"เลือกลูกค้า: {customer_display_name}")
+        print(f"Selected branch: {branch_name}")
         self.show_step3()
         
-    def select_customer(self, customer):
-        self.selected_customer = customer
-        
-        # แสดงชื่อลูกค้าที่เลือก
-        customer_display_name = customer.get('Name', '').strip()
-        if not customer_display_name:
-            customer_display_name = f"ลูกค้า ID: {customer.get('CustomerId', 'N/A')}"
-            
-        print(f"Selected customer: {customer_display_name}")
-        self.show_step3()
-        
-    def display_customers(self, customers):
+    def display_branches(self, branches):
         # Clear results
         for widget in self.results_frame.winfo_children():
             widget.destroy()
         
-        print(f"🔍 Display customers: แสดงผล {len(customers)} รายการ")
+        print(f"🔍 Display branches: แสดงผล {len(branches)} รายการ")
         
-        if not customers:
-            tk.Label(self.results_frame, text="ไม่พบลูกค้าที่ค้นหา",
+        if not branches:
+            tk.Label(self.results_frame, text="ไม่พบสาขาที่ค้นหา",
                     font=('Segoe UI', 14),
                     fg='#6b7280', bg='white').pack(expand=True)
             return
@@ -382,16 +342,14 @@ class SalesBillUI:
         # Results title
         search_term = self.search_entry.get().strip()
         if search_term:
-            title_text = f"ผลการค้นหา '{search_term}': พบ {len(customers)} รายการ"
+            title_text = f"ผลการค้นหา '{search_term}': พบ {len(branches)} สาขา"
         else:
-            title_text = f"ลูกค้าทั้งหมดที่มียอดค้างชำระ: {len(customers)} รายการ"
+            title_text = f"สาขาทั้งหมดที่มียอดค้างวางบิล: {len(branches)} สาขา"
         
         title_label = tk.Label(self.results_frame, text=title_text,
                             font=('Segoe UI', 14, 'bold'),
                             fg='#1f2937', bg='white')
         title_label.pack(anchor='w', pady=(0, 20))
-        
-        print(f"📋 Title label packed: {title_text}")
         
         # Container for scrollable content
         container = tk.Frame(self.results_frame, bg='white')
@@ -402,86 +360,71 @@ class SalesBillUI:
         scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas, bg='white')
         
-        # Configure scrolling
         def on_frame_configure(event):
             canvas.configure(scrollregion=canvas.bbox("all"))
         
         scrollable_frame.bind("<Configure>", on_frame_configure)
         
-        # Pack canvas and scrollbar
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         
-        # Create window in canvas
         canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        
-        # Configure canvas scrolling
         canvas.configure(yscrollcommand=scrollbar.set)
         
-        # Make canvas responsive to window width
         def on_canvas_configure(event):
             canvas.itemconfig(canvas_window, width=event.width)
         
         canvas.bind('<Configure>', on_canvas_configure)
         
-        print(f"📦 Canvas and scrollbar setup complete")
-        
-        # Create customer cards
-        for i, customer in enumerate(customers):
-            print(f"🃏 Creating card {i+1} for customer ID: {customer.get('CustomerId')}")
+        # Create branch cards
+        for i, branch in enumerate(branches):
+            print(f"🃏 Creating card {i+1} for branch: {branch.get('BranchName')}")
             try:
-                self.create_customer_card(scrollable_frame, customer)
+                self.create_branch_card(scrollable_frame, branch)
                 print(f"✅ Card {i+1} created successfully")
             except Exception as e:
                 print(f"❌ Error creating card {i+1}: {str(e)}")
         
-        # Force update to ensure everything is drawn
         self.window.update_idletasks()
         
-        print(f"🎯 Display complete: {len(customers)} cards should be visible")
-        
-        # Debug: Check if scrollable_frame has children
-        children_count = len(scrollable_frame.winfo_children())
-        print(f"🔍 Scrollable frame has {children_count} children")  
+        print(f"🎯 Display complete: {len(branches)} cards should be visible")
               
-    def create_customer_card(self, parent, customer):
+    def create_branch_card(self, parent, branch):
+        """สร้างการ์ดแสดงข้อมูลสาขา"""
         card = tk.Frame(parent, bg='#f8fafc', relief='solid', bd=1, padx=15, pady=8)
-        card.pack(fill='x', pady=3)  # ลด spacing
+        card.pack(fill='x', pady=3)
         
-        # Header row
         header_frame = tk.Frame(card, bg='#f8fafc')
         header_frame.pack(fill='x')
         
-        # Customer info
-        customer_id = customer.get('CustomerId', '')
-        customer_name = customer.get('Name', '').strip()
-        acct = customer.get('Acct', '').strip()
+        # Branch info
+        branch_name = branch.get('BranchName', '')
+        withdrawal_count = branch.get('WithdrawalCount', 0)
+        total_amount = branch.get('TotalAmount', 0)
         
-        display_name = customer_name if customer_name else f"ลูกค้า ID: {customer_id}"
+        display_name = branch_name if branch_name else "สาขา (ไม่ระบุชื่อ)"
         
         # Left side
         info_frame = tk.Frame(header_frame, bg='#f8fafc')
         info_frame.pack(side='left', fill='x', expand=True)
         
         tk.Label(info_frame, text=display_name,
-                font=('Segoe UI', 12, 'bold'),  # ลดขนาด
+                font=('Segoe UI', 12, 'bold'),
                 fg='#1f2937', bg='#f8fafc').pack(anchor='w')
         
-        details = f"ID: {customer_id}"
-        if acct:
-            details += f" | บัญชี: {acct}"
+        details = f"มี {withdrawal_count} ใบเบิกโอน | ยอดรวม: {total_amount:,.2f} บาท"
         
         tk.Label(info_frame, text=details,
                 font=('Segoe UI', 9),
                 fg='#6b7280', bg='#f8fafc').pack(anchor='w')
         
-        # Right side - ปุ่มเล็กลง
+        # Right side
         select_btn = tk.Button(header_frame, text="เลือก",
                             font=('Segoe UI', 10, 'bold'),
                             bg='#10b981', fg='white',
                             border=0, padx=15, pady=6,
                             cursor='hand2',
-                            command=lambda: self.select_customer(customer))
+                            command=lambda: self.select_branch(branch))
         select_btn.pack(side='right')
         
         # Hover effects
@@ -503,80 +446,7 @@ class SalesBillUI:
         
         card.bind("<Enter>", on_enter)
         card.bind("<Leave>", on_leave)
-        card.bind("<Button-1>", lambda e: self.select_customer(customer))
-                
-    def load_customer_invoices_for_display(self):
-        """โหลดข้อมูลจากฐานข้อมูลผ่าน database class"""
-        try:
-            search_term = self.search_entry.get().strip()
-            invoices_data = self.db.get_customer_invoices_for_display(search_term)
-            
-            # Clear existing data
-            for item in self.customer_tree.get_children():
-                self.customer_tree.delete(item)
-            
-            # Insert data
-            for invoice in invoices_data:
-                values = (
-                    invoice.get('CustomerId', ''),
-                    invoice.get('Acct', ''),
-                    invoice.get('Name', ''),
-                    invoice.get('CustomerName', ''),
-                    invoice.get('CustomerAddress', ''),
-                    invoice.get('PhoneMobile', ''),
-                    invoice.get('CustomerTaxNum', ''),
-                    invoice.get('InvoiceNumber', ''),
-                    invoice.get('InvoiceDate', ''),
-                    invoice.get('MaxDueDate', ''),
-                    invoice.get('DueDate', ''),
-                    invoice.get('Total', ''),
-                    invoice.get('PaidAmount', ''),
-                    invoice.get('UnpaidAmount', '')
-                )
-                self.customer_tree.insert('', 'end', values=values)
-            
-            print(f"✅ แสดงข้อมูลในตาราง {len(invoices_data)} รายการ")
-            
-        except Exception as e:
-            print(f"❌ ข้อผิดพลาดในการโหลดข้อมูล: {str(e)}")
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถโหลดข้อมูลได้: {str(e)}")
-
-    def on_customer_select(self, event):
-        """เมื่อ double-click ในตาราง"""
-        self.select_from_tree()
-
-    # def select_from_tree(self):
-        """เลือกลูกค้าจากตาราง"""
-        selected_item = self.customer_tree.selection()
-        if not selected_item:
-            messagebox.showwarning("คำเตือน", "กรุณาเลือกลูกค้าจากตาราง")
-            return
-        
-        # Get selected data
-        values = self.customer_tree.item(selected_item[0])['values']
-        
-        # Create customer dict
-        customer = {
-            'CustomerId': values[0],
-            'Acct': values[1],
-            'Name': values[2],
-            'CustomerName': values[3],
-            'CustomerAddress': values[4],
-            'PhoneMobile': values[5],
-            'CustomerTaxNum': values[6]
-        }
-        
-        self.selected_customer = customer
-        
-        # แสดงชื่อลูกค้าที่เลือก
-        customer_display_name = customer.get('CustomerName', '').strip()
-        if not customer_display_name:
-            customer_display_name = customer.get('Name', '').strip()
-        if not customer_display_name:
-            customer_display_name = f"ลูกค้า ID: {customer.get('CustomerId', 'N/A')}"
-            
-        messagebox.showinfo("สำเร็จ", f"เลือกลูกค้า: {customer_display_name}")
-        self.show_step3()
+        card.bind("<Button-1>", lambda e: self.select_branch(branch))
     
     def show_step3(self):
         self.current_step = 3
@@ -590,32 +460,32 @@ class SalesBillUI:
         card = tk.Frame(content, bg='white', padx=20, pady=15)
         card.pack(expand=True, fill='both')
         
-        # Title - เล็กลง
-        customer_name = self.selected_customer.get('Name', '').strip()
-        if not customer_name:
-            customer_name = f"ลูกค้า ID: {self.selected_customer.get('CustomerId', 'N/A')}"
+        # Title
+        branch_name = self.selected_branch.get('BranchName', '').strip()
+        if not branch_name:
+            branch_name = "สาขา (ไม่ระบุชื่อ)"
         
-        tk.Label(card, text=f"ใบแจ้งหนี้ของ {customer_name}",
-                font=('Segoe UI', 14, 'bold'),  # ลดขนาด
+        tk.Label(card, text=f"ใบเบิกโอนของ {branch_name}",
+                font=('Segoe UI', 14, 'bold'),
                 fg='#1f2937', bg='white').pack(anchor='w', pady=(0, 10))
         
-        # Load invoices
-        self.load_customer_invoices()
+        # Load withdrawals
+        self.load_branch_withdrawals()
                         
-    def load_customer_invoices(self):
+    def load_branch_withdrawals(self):
         try:
-            customer_id = self.selected_customer.get('CustomerId')
-            print(f"Loading invoices for customer ID: {customer_id}")
+            branch_name = self.selected_branch.get('BranchName')
+            print(f"Loading withdrawals for branch: {branch_name}")
             
-            invoices = self.db.get_customer_invoices(customer_id)
-            print(f"Found {len(invoices)} invoices")
+            withdrawals = self.db.get_branch_withdrawals(branch_name)
+            print(f"Found {len(withdrawals)} withdrawals")
             
-            self.display_invoices(invoices)
+            self.display_withdrawals(withdrawals)
         except Exception as e:
-            print(f"Error loading invoices: {str(e)}")
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถโหลดใบแจ้งหนี้ได้: {str(e)}")
+            print(f"Error loading withdrawals: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถโหลดใบเบิกโอนได้: {str(e)}")
                 
-    def display_invoices(self, invoices):
+    def display_withdrawals(self, withdrawals):
         # Find the card widget
         card = None
         for widget in self.window.winfo_children():
@@ -623,115 +493,88 @@ class SalesBillUI:
                 card = widget.winfo_children()[0]
                 break
         
-        if not invoices:
-            tk.Label(card, text="ไม่พบใบแจ้งหนี้ที่ค้างชำระสำหรับลูกค้ารายนี้",
+        if not withdrawals:
+            tk.Label(card, text="ไม่พบใบเบิกโอนที่ค้างวางบิลสำหรับสาขานี้",
                     font=('Segoe UI', 14),
                     fg='#6b7280', bg='white').pack(expand=True)
             return
         
-        # Create treeview for invoices
+        # Create treeview for withdrawals
         tree_frame = tk.Frame(card, bg='white')
         tree_frame.pack(fill='both', expand=True, pady=(0, 20))
         
-        # Create Treeview with consistent style
         style = ttk.Style()
-        style.configure("Invoice.Treeview", 
-                    font=('Segoe UI', 10),  # ฟอนต์เท่ากับ Step 4
+        style.configure("Withdrawal.Treeview", 
+                    font=('Segoe UI', 10),
                     rowheight=25)
-        style.configure("Invoice.Treeview.Heading", 
+        style.configure("Withdrawal.Treeview.Heading", 
                     font=('Segoe UI', 11, 'bold'))
         
-        columns = ('Select', 'InvoiceNumber', 'InvoiceDate', 'MaxDueDate', 'DueDate', 'UnpaidAmount')
+        columns = ('Select', 'WithdrawalNumber', 'WithdrawalDate', 'Total')
         
-        self.invoice_tree = ttk.Treeview(tree_frame, columns=columns, show='headings', 
-                                        height=12, style="Invoice.Treeview")  # เพิ่มความสูง
+        self.withdrawal_tree = ttk.Treeview(tree_frame, columns=columns, show='headings', 
+                                        height=12, style="Withdrawal.Treeview")
         
         # Configure columns
         column_config = {
-            'Select': {'text': 'เลือกรายการ', 'width': 30, 'anchor': 'center'},
-            'InvoiceNumber': {'text': 'เลขที่ใบแจ้งหนี้', 'width': 150, 'anchor': 'center'},
-            'InvoiceDate': {'text': 'วันที่ออกใบแจ้งหนี้', 'width': 120, 'anchor': 'center'},
-            'MaxDueDate': {'text': 'ระยะเวลาชำระ (วัน)', 'width': 100, 'anchor': 'center'},
-            'DueDate': {'text': 'วันครบกำหนด', 'width': 120, 'anchor': 'center'},
-            'UnpaidAmount': {'text': 'ยอดค้างชำระ (บาท)', 'width': 150, 'anchor': 'center'}
-        }        
+            'Select': {'text': 'เลือก', 'width': 50, 'anchor': 'center'},
+            'WithdrawalNumber': {'text': 'เลขที่ใบเบิกโอน', 'width': 150, 'anchor': 'center'},
+            'WithdrawalDate': {'text': 'วันที่เบิกโอน', 'width': 120, 'anchor': 'center'},
+            'Total': {'text': 'ยอดรวม (บาท)', 'width': 120, 'anchor': 'center'}
+        }
             
-        # Configure columns with center alignment
         for col in columns:
-            self.invoice_tree.heading(col, text=column_config[col]['text'], anchor='center')
-            self.invoice_tree.column(col, 
+            self.withdrawal_tree.heading(col, text=column_config[col]['text'], anchor='center')
+            self.withdrawal_tree.column(col, 
                                 width=column_config[col]['width'], 
-                                minwidth=30 if col == 'Select' else 50,
+                                minwidth=50,
                                 anchor=column_config[col]['anchor'])
         
         # Add scrollbar
-        scrollbar = ttk.Scrollbar(tree_frame, orient='vertical', command=self.invoice_tree.yview)
-        self.invoice_tree.configure(yscrollcommand=scrollbar.set)
+        scrollbar = ttk.Scrollbar(tree_frame, orient='vertical', command=self.withdrawal_tree.yview)
+        self.withdrawal_tree.configure(yscrollcommand=scrollbar.set)
         
-        # Pack treeview and scrollbar
-        self.invoice_tree.pack(side='left', fill='both', expand=True)
+        self.withdrawal_tree.pack(side='left', fill='both', expand=True)
         scrollbar.pack(side='right', fill='y')
         
-        # Insert data and track selections  
-        self.invoice_items = {}
+        # Insert data
+        self.withdrawal_items = {}
+        self.selected_withdrawals = set()
         
-        # รีเซ็ต selected_invoices เป็น set ใหม่
-        self.selected_invoices = set()
+        if not hasattr(self, 'selected_withdrawal_numbers'):
+            self.selected_withdrawal_numbers = set()
         
-        # ตรวจสอบ selected_invoice_numbers
-        if not hasattr(self, 'selected_invoice_numbers'):
-            self.selected_invoice_numbers = set()
+        print(f"Displaying withdrawals with pre-selected: {self.selected_withdrawal_numbers}")
         
-        print(f"Displaying invoices with pre-selected: {self.selected_invoice_numbers}")
-        
-        for invoice in invoices:
-            # Format dates และข้อมูลอื่น ๆ (เหมือนเดิม)
-            invoice_date = invoice.get('InvoiceDate', '')
-            if len(invoice_date) > 10:
-                invoice_date = invoice_date[:10]
-                
-            due_date = invoice.get('DueDate', '')
-            if len(due_date) > 10:
-                due_date = due_date[:10]
-            
-            max_due_date = invoice.get('MaxDueDate', '0')
-            
-            unpaid_amount = invoice.get('UnpaidAmount', '0')
-            if isinstance(unpaid_amount, str) and ',' in unpaid_amount:
-                formatted_amount = unpaid_amount
-            else:
-                try:
-                    amount_float = float(str(unpaid_amount).replace(',', ''))
-                    formatted_amount = f"{amount_float:,.2f}"
-                except:
-                    formatted_amount = str(unpaid_amount)
-            
-            # ตรวจสอบการเลือก
-            invoice_number = invoice.get('InvoiceNumber', '')
-            is_selected = invoice_number in self.selected_invoice_numbers
+        for withdrawal in withdrawals:
+            withdrawal_number = withdrawal.get('WithdrawalNumber', '')
+            is_selected = withdrawal_number in self.selected_withdrawal_numbers
             checkbox = '✓' if is_selected else ''
             
-            item_id = self.invoice_tree.insert('', 'end', values=(
+            total = withdrawal.get('Total', 0)
+            try:
+                total_float = float(str(total).replace(',', ''))
+                formatted_total = f"{total_float:,.2f}"
+            except:
+                formatted_total = str(total)
+            
+            item_id = self.withdrawal_tree.insert('', 'end', values=(
                 checkbox,
-                invoice_number,
-                invoice_date,
-                max_due_date,
-                due_date,
-                formatted_amount
+                withdrawal_number,
+                withdrawal.get('WithdrawalDate', ''),
+                formatted_total
             ))
             
-            self.invoice_items[item_id] = invoice
+            self.withdrawal_items[item_id] = withdrawal
             
-            # เพิ่มเข้า selected_invoices ถ้าถูกเลือกไว้
             if is_selected:
-                self.selected_invoices.add(item_id)
-                print(f"Restored selection for: {invoice_number}")
-                    
-        # Bind click event
-        self.invoice_tree.bind('<Button-1>', self.on_invoice_click)
-        self.invoice_tree.bind('<Double-Button-1>', self.on_invoice_click)
+                self.selected_withdrawals.add(item_id)
         
-        # Control buttons (เหมือนเดิม)
+        # Bind click event
+        self.withdrawal_tree.bind('<Button-1>', self.on_withdrawal_click)
+        self.withdrawal_tree.bind('<Double-Button-1>', self.on_withdrawal_click)
+        
+        # Control buttons
         control_frame = tk.Frame(card, bg='white')
         control_frame.pack(fill='x', pady=(10, 0))
         
@@ -742,14 +585,14 @@ class SalesBillUI:
                                 font=('Segoe UI', 10),
                                 bg='#3b82f6', fg='white',
                                 padx=15, pady=8,
-                                command=self.select_all_invoices)
+                                command=self.select_all_withdrawals)
         select_all_btn.pack(side='left', padx=(0, 10))
         
         clear_all_btn = tk.Button(left_buttons, text="ยกเลิกทั้งหมด",
                                 font=('Segoe UI', 10),
                                 bg='#ef4444', fg='white',
                                 padx=15, pady=8,
-                                command=self.clear_all_invoices)
+                                command=self.clear_all_withdrawals)
         clear_all_btn.pack(side='left')
         
         info_frame = tk.Frame(control_frame, bg='white')
@@ -785,90 +628,74 @@ class SalesBillUI:
                                     command=self.show_step4)
         self.continue_btn.pack(side='right')
         
-        # อัพเดทการแสดงผลตามที่เลือกไว้
         self.update_selected_count()
 
-    def get_selected_invoice_numbers(self):
-        """ดึงรายการเลขที่ใบแจ้งหนี้ที่เลือกไว้"""
-        if not hasattr(self, 'selected_invoice_numbers'):
-            self.selected_invoice_numbers = set()
-        return self.selected_invoice_numbers
-
-    def on_invoice_click(self, event):
-        item_id = self.invoice_tree.identify_row(event.y)
-        if not item_id or item_id not in self.invoice_items:
-            return
-        
-        values = list(self.invoice_tree.item(item_id)['values'])
-        invoice_number = values[1]  # InvoiceNumber อยู่ที่ index 1
-        
-        # ตรวจสอบสถานะปัจจุบัน
-        is_currently_selected = item_id in self.selected_invoices
-        
-        # Toggle selection
-        if is_currently_selected:
-            # ยกเลิกการเลือก
-            self.selected_invoices.remove(item_id)
-            values[0] = ''
-            # ลบจาก selected_invoice_numbers
-            if hasattr(self, 'selected_invoice_numbers'):
-                self.selected_invoice_numbers.discard(invoice_number)
-        else:
-            # เลือก
-            self.selected_invoices.add(item_id)
-            values[0] = '✓'
-            # เพิ่มเข้า selected_invoice_numbers
-            if not hasattr(self, 'selected_invoice_numbers'):
-                self.selected_invoice_numbers = set()
-            self.selected_invoice_numbers.add(invoice_number)
-        
-        # อัพเดทแสดงผลทันที
-        self.invoice_tree.item(item_id, values=values)
-        
-        # Debug
-        print(f"Clicked {invoice_number}: selected={not is_currently_selected}")
-        print(f"Current selected_invoice_numbers: {self.selected_invoice_numbers}")
-        
-        self.update_selected_count()
-        
-    def select_all_invoices(self):
-        if not hasattr(self, 'selected_invoice_numbers'):
-            self.selected_invoice_numbers = set()
+    def on_withdrawal_click(self, event):
+            item_id = self.withdrawal_tree.identify_row(event.y)
+            if not item_id or item_id not in self.withdrawal_items:
+                return
             
-        for item_id in self.invoice_items:
-            self.selected_invoices.add(item_id)
-            values = list(self.invoice_tree.item(item_id)['values'])
+            values = list(self.withdrawal_tree.item(item_id)['values'])
+            withdrawal_number = values[1]
+            
+            is_currently_selected = item_id in self.selected_withdrawals
+            
+            # Toggle selection
+            if is_currently_selected:
+                self.selected_withdrawals.remove(item_id)
+                values[0] = ''
+                if hasattr(self, 'selected_withdrawal_numbers'):
+                    self.selected_withdrawal_numbers.discard(withdrawal_number)
+            else:
+                self.selected_withdrawals.add(item_id)
+                values[0] = '✓'
+                if not hasattr(self, 'selected_withdrawal_numbers'):
+                    self.selected_withdrawal_numbers = set()
+                self.selected_withdrawal_numbers.add(withdrawal_number)
+            
+            self.withdrawal_tree.item(item_id, values=values)
+            
+            print(f"Clicked {withdrawal_number}: selected={not is_currently_selected}")
+            print(f"Current selected_withdrawal_numbers: {self.selected_withdrawal_numbers}")
+            
+            self.update_selected_count()
+            
+    def select_all_withdrawals(self):
+        if not hasattr(self, 'selected_withdrawal_numbers'):
+            self.selected_withdrawal_numbers = set()
+            
+        for item_id in self.withdrawal_items:
+            self.selected_withdrawals.add(item_id)
+            values = list(self.withdrawal_tree.item(item_id)['values'])
             values[0] = '✓'
-            self.invoice_tree.item(item_id, values=values)
-            # เพิ่มเลขที่ใบแจ้งหนี้เข้า set
-            invoice_number = values[1]
-            self.selected_invoice_numbers.add(invoice_number)
+            self.withdrawal_tree.item(item_id, values=values)
+            withdrawal_number = values[1]
+            self.selected_withdrawal_numbers.add(withdrawal_number)
         self.update_selected_count()
 
-    def clear_all_invoices(self):
-        self.selected_invoices.clear()
-        if hasattr(self, 'selected_invoice_numbers'):
-            self.selected_invoice_numbers.clear()
+    def clear_all_withdrawals(self):
+        self.selected_withdrawals.clear()
+        if hasattr(self, 'selected_withdrawal_numbers'):
+            self.selected_withdrawal_numbers.clear()
             
-        for item_id in self.invoice_items:
-            values = list(self.invoice_tree.item(item_id)['values'])
+        for item_id in self.withdrawal_items:
+            values = list(self.withdrawal_tree.item(item_id)['values'])
             values[0] = ''
-            self.invoice_tree.item(item_id, values=values)
+            self.withdrawal_tree.item(item_id, values=values)
         self.update_selected_count()
         
     def update_selected_count(self):
-        # ตรวจสอบให้แน่ใจว่าเป็น set
-        if not isinstance(self.selected_invoices, set):
-            self.selected_invoices = set(self.selected_invoices) if self.selected_invoices else set()
+        if not isinstance(self.selected_withdrawals, set):
+            self.selected_withdrawals = set(self.selected_withdrawals) if self.selected_withdrawals else set()
         
-        selected_count = len(self.selected_invoices)
+        selected_count = len(self.selected_withdrawals)
         
         # Calculate total amount
         total_amount = 0.0
-        for item_id in self.selected_invoices:
-            invoice = self.invoice_items[item_id]
+        for item_id in self.selected_withdrawals:
+            withdrawal = self.withdrawal_items[item_id]
             try:
-                amount_str = str(invoice.get('UnpaidAmount', '0')).replace(',', '')
+                amount_str = str(withdrawal.get('Total', '0')).replace(',', '')
                 total_amount += float(amount_str)
             except:
                 pass
@@ -882,93 +709,11 @@ class SalesBillUI:
             self.continue_btn.config(state='normal', bg='#10b981')
         else:
             self.continue_btn.config(state='disabled', bg='#9ca3af')
-                                                
-    def create_invoice_card(self, parent, invoice):
-        card_container = tk.Frame(parent, bg='white')
-        card_container.pack(fill='x', pady=(0, 15))
         
-        # Shadow
-        shadow = tk.Frame(card_container, bg='#e5e7eb')
-        shadow.pack(fill='x', padx=(2, 0), pady=(2, 0))
-        
-        # Main card
-        card = tk.Frame(card_container, bg='#f9fafb', relief='solid', bd=1)
-        card.place(x=0, y=0, relwidth=1, relheight=1)
-        
-        # Content
-        content_frame = tk.Frame(card, bg='#f9fafb', padx=20, pady=15)
-        content_frame.pack(fill='both', expand=True)
-        
-        # Header with checkbox
-        header_frame = tk.Frame(content_frame, bg='#f9fafb')
-        header_frame.pack(fill='x', pady=(0, 10))
-        
-        # Checkbox
-        var = tk.BooleanVar()
-        self.invoice_vars[invoice['InvoiceNumber']] = var
-        
-        checkbox = tk.Checkbutton(header_frame, variable=var,
-                                 font=('Segoe UI', 12),
-                                 bg='#f9fafb', fg='#1f2937',
-                                 activebackground='#f9fafb',
-                                 command=self.update_selected_invoices)
-        checkbox.pack(side='left', padx=(0, 10))
-        
-        # Invoice info
-        info_frame = tk.Frame(header_frame, bg='#f9fafb')
-        info_frame.pack(side='left', fill='x', expand=True)
-        
-        tk.Label(info_frame, text=f"📄 {invoice['InvoiceNumber']}",
-                font=('Segoe UI', 13, 'bold'),
-                fg='#1f2937', bg='#f9fafb').pack(anchor='w')
-        
-        tk.Label(info_frame, text=f"📅 วันที่: {invoice['InvoiceDate']} | 📅 ครบกำหนด: {invoice['DueDate']}",
-                font=('Segoe UI', 9),
-                fg='#6b7280', bg='#f9fafb').pack(anchor='w')
-        
-        # Amount info
-        amount_frame = tk.Frame(header_frame, bg='#f9fafb')
-        amount_frame.pack(side='right')
-        
-        tk.Label(amount_frame, text=f"💰 ยอดค้างชำระ",
-                font=('Segoe UI', 9),
-                fg='#6b7280', bg='#f9fafb').pack(anchor='e')
-        
-        tk.Label(amount_frame, text=f"฿ {invoice['UnpaidAmount']:,.2f}",
-                font=('Segoe UI', 12, 'bold'),
-                fg='#ef4444', bg='#f9fafb').pack(anchor='e')
-        
-        # Details
-        details_frame = tk.Frame(content_frame, bg='#f9fafb')
-        details_frame.pack(fill='x')
-        
-        tk.Label(details_frame, text=f"💵 ยอดรวม: ฿ {invoice['Total']:,.2f} | 💸 ชำระแล้ว: ฿ {invoice['PaidAmount']:,.2f}",
-                font=('Segoe UI', 9),
-                fg='#6b7280', bg='#f9fafb').pack(anchor='w')
-    
-    def update_selected_invoices(self):
-        self.selected_invoices = [
-            invoice_no for invoice_no, var in self.invoice_vars.items() 
-            if var.get()
-        ]
-        
-        if hasattr(self, 'selected_count_label'):
-            self.selected_count_label.config(text=f"เลือกแล้ว: {len(self.selected_invoices)} รายการ")
-        
-        self.update_continue_button()
-  
-    
-    def update_continue_button(self):
-        if hasattr(self, 'continue_btn'):
-            if self.selected_invoices:
-                self.continue_btn.config(state='normal', bg='#10b981')
-            else:
-                self.continue_btn.config(state='disabled', bg='#9ca3af')
-    
     def show_step4(self):
         self.current_step = 4
         self.create_step_indicator()
-        self.sync_selected_invoices()
+        self.sync_selected_withdrawals()
         self.clear_content()
         
         content = tk.Frame(self.window, bg='#f8fafc')
@@ -983,33 +728,32 @@ class SalesBillUI:
                 font=('Segoe UI', 16, 'bold'),
                 fg='#1f2937', bg='white').pack(pady=(0, 15))
         
-        # Customer info - กะทัดรัด
-        customer_detail = self.get_customer_detail()
+        # Branch info
+        branch_detail = self.get_branch_detail()
         
-        customer_frame = tk.Frame(card, bg='#f0f9ff', padx=15, pady=8, relief='solid', bd=1)
-        customer_frame.pack(fill='x', pady=(0, 15))
+        branch_frame = tk.Frame(card, bg='#f0f9ff', padx=15, pady=8, relief='solid', bd=1)
+        branch_frame.pack(fill='x', pady=(0, 15))
         
-        tk.Label(customer_frame, text="ข้อมูลลูกค้า",
+        tk.Label(branch_frame, text="ข้อมูลสาขา",
                 font=('Segoe UI', 12, 'bold'),
                 fg='#1f2937', bg='#f0f9ff').pack(anchor='w', pady=(0, 3))
         
-        if customer_detail:
-            info_text = f"ชื่อ: {customer_detail.get('Name', '')} | โทร: {customer_detail.get('PhoneMobile', '')} | ที่อยู่: {customer_detail.get('full_address', '')}"
-            tk.Label(customer_frame, text=info_text,
+        if branch_detail:
+            info_text = f"ชื่อ: {branch_detail.get('Name', '')}"
+            tk.Label(branch_frame, text=info_text,
                     font=('Segoe UI', 9),
                     fg='#374151', bg='#f0f9ff',
                     wraplength=1000).pack(anchor='w')
         
-        # Invoice table header
-        tk.Label(card, text="รายการใบแจ้งหนี้ที่เลือก",
+        # Withdrawal table header
+        tk.Label(card, text="รายการใบเบิกโอนที่เลือก",
                 font=('Segoe UI', 12, 'bold'),
                 fg='#1f2937', bg='white').pack(anchor='w', pady=(0, 5))
         
-        # Table frame - ใช้พื้นที่เต็มที่
+        # Table frame
         tree_frame = tk.Frame(card, bg='white')
         tree_frame.pack(fill='both', expand=True, pady=(0, 15))
         
-        # Treeview with same style as Step 3
         style = ttk.Style()
         style.configure("Summary.Treeview", 
                     font=('Segoe UI', 10),
@@ -1017,19 +761,17 @@ class SalesBillUI:
         style.configure("Summary.Treeview.Heading", 
                     font=('Segoe UI', 11, 'bold'))
         
-        columns = ('No', 'InvoiceNumber', 'InvoiceDate', 'MaxDueDate', 'DueDate', 'UnpaidAmount')
+        columns = ('No', 'WithdrawalNumber', 'WithdrawalDate', 'Total')
         
         summary_tree = ttk.Treeview(tree_frame, columns=columns, show='headings', 
-                                style="Summary.Treeview")
+                        style="Summary.Treeview")
         
         # Configure columns
         column_config = {
-            'No': {'text': 'ลำดับที่', 'width': 60, 'anchor': 'center'},
-            'InvoiceNumber': {'text': 'เลขที่ใบแจ้งหนี้', 'width': 150, 'anchor': 'center'},
-            'InvoiceDate': {'text': 'วันที่ออกใบแจ้งหนี้', 'width': 120, 'anchor': 'center'},
-            'MaxDueDate': {'text': 'ระยะเวลาชำระ (วัน)', 'width': 100, 'anchor': 'center'},
-            'DueDate': {'text': 'วันครบกำหนด', 'width': 120, 'anchor': 'center'},
-            'UnpaidAmount': {'text': 'ยอดค้างชำระ (บาท)', 'width': 150, 'anchor': 'center'}
+            'No': {'text': 'ลำดับ', 'width': 50, 'anchor': 'center'},
+            'WithdrawalNumber': {'text': 'เลขที่ใบเบิกโอน', 'width': 150, 'anchor': 'center'},
+            'WithdrawalDate': {'text': 'วันที่เบิกโอน', 'width': 120, 'anchor': 'center'},
+            'Total': {'text': 'ยอดรวม (บาท)', 'width': 120, 'anchor': 'center'}
         }
         
         for col in columns:
@@ -1043,7 +785,6 @@ class SalesBillUI:
         scrollbar = ttk.Scrollbar(tree_frame, orient='vertical', command=summary_tree.yview)
         summary_tree.configure(yscrollcommand=scrollbar.set)
         
-        # Pack treeview and scrollbar
         summary_tree.pack(side='left', fill='both', expand=True)
         scrollbar.pack(side='right', fill='y')
         
@@ -1051,36 +792,29 @@ class SalesBillUI:
         total_amount = 0.0
         count = 0
         
-        for item_id in self.selected_invoices:
-            if item_id in self.invoice_items:
-                invoice = self.invoice_items[item_id]
+        for item_id in self.selected_withdrawals:
+            if item_id in self.withdrawal_items:
+                withdrawal = self.withdrawal_items[item_id]
                 count += 1
                 
-                invoice_date = invoice.get('InvoiceDate', '')[:10] if len(invoice.get('InvoiceDate', '')) > 10 else invoice.get('InvoiceDate', '')
-                due_date = invoice.get('DueDate', '')[:10] if len(invoice.get('DueDate', '')) > 10 else invoice.get('DueDate', '')
-                
                 try:
-                    amount_str = str(invoice.get('UnpaidAmount', '0')).replace(',', '')
-                    amount = float(amount_str)
+                    amount = float(str(withdrawal.get('Total', '0')).replace(',', ''))
                     total_amount += amount
                     formatted_amount = f"{amount:,.2f}"
                 except:
-                    formatted_amount = str(invoice.get('UnpaidAmount', '0'))
+                    formatted_amount = str(withdrawal.get('Total', '0'))
                 
                 summary_tree.insert('', 'end', values=(
                     count,
-                    invoice.get('InvoiceNumber', ''),
-                    invoice_date,
-                    invoice.get('MaxDueDate', ''),
-                    due_date,
+                    withdrawal.get('WithdrawalNumber', ''),
+                    withdrawal.get('WithdrawalDate', ''),
                     formatted_amount
                 ))
         
-        # Summary section - เหมือน Step 3
+        # Summary section
         summary_frame = tk.Frame(card, bg='#fef3c7', padx=15, pady=10, relief='solid', bd=1)
         summary_frame.pack(fill='x', pady=(10, 15))
         
-        # Left side
         summary_left = tk.Frame(summary_frame, bg='#fef3c7')
         summary_left.pack(side='left')
         
@@ -1088,7 +822,6 @@ class SalesBillUI:
                 font=('Segoe UI', 11, 'bold'),
                 fg='#10b981', bg='#fef3c7').pack(side='left')
         
-        # Right side
         summary_right = tk.Frame(summary_frame, bg='#fef3c7')
         summary_right.pack(side='right')
         
@@ -1115,94 +848,86 @@ class SalesBillUI:
                             cursor='hand2',
                             command=self.create_billing_document)
         confirm_btn.pack(side='right')
-                        
-    def get_customer_detail(self):
-        """ดึงข้อมูลลูกค้าแบบละเอียดพร้อมที่อยู่"""
+                            
+    def get_branch_detail(self):
+        """ดึงข้อมูลสาขาแบบละเอียด"""
         try:
-            customer_id = self.selected_customer.get('CustomerId')
-            return self.db.get_customer_detail(customer_id)
+            branch_name = self.selected_branch.get('BranchName')
+            return self.db.get_branch_detail(branch_name)
         except Exception as e:
-            print(f"Error getting customer detail: {str(e)}")
+            print(f"Error getting branch detail: {str(e)}")
             return {}
-                        
-    def save_selected_invoices(self):
-        """บันทึกรายการใบแจ้งหนี้ที่เลือกไว้"""
-        if not hasattr(self, 'selected_invoice_numbers'):
-            self.selected_invoice_numbers = set()
-        
-        # เก็บรายการที่เลือกจาก tree ปัจจุบัน
-        for item_id in self.selected_invoices:
-            if item_id in self.invoice_items:
-                invoice_number = self.invoice_items[item_id].get('InvoiceNumber', '')
-                if invoice_number:
-                    self.selected_invoice_numbers.add(invoice_number)
-        
-        print(f"Saved selected invoices: {self.selected_invoice_numbers}")
     
     def create_billing_document(self):
         try:
-            customer_id = self.selected_customer.get('CustomerId')
+            branch_name = self.selected_branch.get('BranchName')
             created_by = self.user_data.get('username', 'Unknown')
             
-            # ดึงเลขที่ใบแจ้งหนี้จริงจาก selected_invoices
-            actual_invoice_numbers = []
-            for item_id in self.selected_invoices:
-                if item_id in self.invoice_items:
-                    invoice_number = self.invoice_items[item_id].get('InvoiceNumber', '')
-                    if invoice_number:
-                        actual_invoice_numbers.append(str(invoice_number))
+            # ดึงเลขที่ใบเบิกโอนจริงจาก selected_withdrawals
+            actual_withdrawal_numbers = []
+            for item_id in self.selected_withdrawals:
+                if item_id in self.withdrawal_items:
+                    withdrawal_number = self.withdrawal_items[item_id].get('WithdrawalNumber', '')
+                    if withdrawal_number:
+                        actual_withdrawal_numbers.append(str(withdrawal_number))
             
-            if not actual_invoice_numbers:
-                messagebox.showerror("ข้อผิดพลาด", "ไม่พบรายการใบแจ้งหนี้ที่เลือก")
+            if not actual_withdrawal_numbers:
+                messagebox.showerror("ข้อผิดพลาด", "ไม่พบรายการใบเบิกโอนที่เลือก")
                 return
             
+            print(f"Creating billing for Branch: {branch_name}")
+            print(f"Withdrawal numbers: {actual_withdrawal_numbers}")
+            print(f"Created by: {created_by}")
+            
             billing_doc_no = self.db.create_billing_document(
-                customer_id=customer_id,
-                invoice_numbers=actual_invoice_numbers,
+                branch_name=branch_name,
+                withdrawal_numbers=actual_withdrawal_numbers,
                 created_by=created_by
             )
             
             if billing_doc_no:
-                # สอบถามว่าต้องการแสดงตัวอย่างใบวางบิลหรือไม่
                 response = messagebox.askyesno(
                     "สำเร็จ", 
-                    f"สร้างใบวางบิลเรียบร้อยแล้ว\nเลขที่เอกสาร: {billing_doc_no}\n\nคุณต้องการแสดงตัวอย่างใบวางบิลหรือไม่?",
+                    f"สร้างใบวางบิลสาขาเรียบร้อยแล้ว\nเลขที่เอกสาร: {billing_doc_no}\n\nคุณต้องการแสดงตัวอย่างใบวางบิลหรือไม่?",
                     icon='question'
                 )
                 
-                if response:  # ถ้าตอบ Yes
-                    self.show_billing_template(billing_doc_no, customer_id, actual_invoice_numbers)
+                if response:
+                    self.show_billing_template(billing_doc_no, branch_name, actual_withdrawal_numbers)
                 
                 self.reset_form()
             else:
-                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถสร้างใบวางบิลได้")
+                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถสร้างใบวางบิลสาขาได้")
                 
         except Exception as e:
             messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด: {str(e)}")
             print(f"Error in create_billing_document: {str(e)}")
-
-    def show_billing_template(self, billing_doc_no, customer_id, invoice_numbers):
-        """แสดงตัวอย่างใบวางบิลด้วยข้อมูลจริง"""
-        try:
-            # Import BillingNoteGenerator
-            from billing_note_generator import BillingNoteGenerator
+            import traceback
+            traceback.print_exc()
             
-            # เตรียมข้อมูลสำหรับ template
-            template_data = self.prepare_template_data(billing_doc_no, customer_id, invoice_numbers)
-            
-            # แสดงตัวอย่างด้วยข้อมูลจริง
-            BillingNoteGenerator.Preview_Template_With_Data(template_data, 'sales')
-            
-        except ImportError as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่พบ BillingNoteGenerator: {str(e)}")
-        except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถแสดงตัวอย่างใบวางบิลได้: {str(e)}")
-            print(f"Error showing template: {str(e)}")
-
-    def prepare_template_data(self, billing_doc_no, customer_id, invoice_numbers):
+    def show_billing_template(self, billing_doc_no, branch_name, withdrawal_numbers):
+            """แสดงตัวอย่างใบวางบิลด้วยข้อมูลจริง"""
+            try:
+                from billing_note_generator import BillingNoteGenerator
+                
+                template_data = self.prepare_template_data(billing_doc_no, branch_name, withdrawal_numbers)
+                
+                generator = BillingNoteGenerator(template_type='branch')
+                generator.preview_in_browser(template_data)
+                
+            except ImportError as e:
+                messagebox.showerror("ข้อผิดพลาด", f"ไม่พบ BillingNoteGenerator: {str(e)}")
+            except Exception as e:
+                messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถแสดงตัวอย่างได้: {str(e)}")
+                print(f"Error showing template: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                        
+    def prepare_template_data(self, billing_doc_no, branch_name, withdrawal_numbers):
         """เตรียมข้อมูลสำหรับ template"""
         try:
-            # ⭐ ดึงข้อมูลบริษัทจาก database
+            branch_detail = self.db.get_branch_detail(branch_name)
+            
             try:
                 from database_manager import get_company_data
                 company_data = get_company_data()
@@ -1215,54 +940,37 @@ class SalesBillUI:
                     'SitePicture': ''
                 }
             
-            # ดึงข้อมูลลูกค้าแบบละเอียด
-            customer_detail = self.db.get_customer_detail(customer_id)
-            
-            # คำนวณยอดรวมและเตรียมรายการ
             total_amount = 0.0
             first_item = None
             additional_items = []
             
             order = 1
-            for item_id in self.selected_invoices:
-                if item_id in self.invoice_items:
-                    invoice = self.invoice_items[item_id]
+            for item_id in self.selected_withdrawals:
+                if item_id in self.withdrawal_items:
+                    withdrawal = self.withdrawal_items[item_id]
                     
-                    # แปลงข้อมูลวันที่เป็น dd/mm/yyyy
-                    invoice_date = invoice.get('InvoiceDate', '')[:10] if len(invoice.get('InvoiceDate', '')) > 10 else invoice.get('InvoiceDate', '')
-                    if invoice_date:
+                    withdrawal_date = withdrawal.get('WithdrawalDate', '')[:10] if len(withdrawal.get('WithdrawalDate', '')) > 10 else withdrawal.get('WithdrawalDate', '')
+                    if withdrawal_date:
                         try:
-                            date_obj = datetime.strptime(invoice_date, '%Y-%m-%d')
-                            invoice_date = date_obj.strftime('%d/%m/%Y')
-                        except:
-                            pass
-                    
-                    due_date = invoice.get('DueDate', '')[:10] if len(invoice.get('DueDate', '')) > 10 else invoice.get('DueDate', '')
-                    if due_date:
-                        try:
-                            date_obj = datetime.strptime(due_date, '%Y-%m-%d')
-                            due_date = date_obj.strftime('%d/%m/%Y')
+                            date_obj = datetime.strptime(withdrawal_date, '%Y-%m-%d')
+                            withdrawal_date = date_obj.strftime('%d/%m/%Y')
                         except:
                             pass
                     
                     try:
-                        unpaid_amount = float(str(invoice.get('UnpaidAmount', '0')).replace(',', ''))
-                        total_amount += unpaid_amount
-                        formatted_amount = f"{unpaid_amount:,.2f}"
+                        amount = float(str(withdrawal.get('Total', '0')).replace(',', ''))
+                        total_amount += amount
+                        formatted_amount = f"{amount:,.2f}"
                     except:
-                        unpaid_amount = 0.0
+                        amount = 0.0
                         formatted_amount = "0.00"
                     
                     item_data = {
-                        'order': order,  # ⭐ เพิ่ม order
-                        'type': 'ใบขาย',  # แก้เป็น "ใบขาย" ตาม template
-                        'docNo': invoice.get('InvoiceNumber', ''),
-                        'date': invoice_date,
-                        'credit': str(invoice.get('MaxDueDate', '')),
-                        'dueDate': due_date,
-                        'total': formatted_amount,
-                        'paidAmount': '0.00',
-                        'unpaidAmount': formatted_amount
+                        'order': order,
+                        'type': 'ใบเบิกโอน',
+                        'withdrawalNo': withdrawal.get('WithdrawalNumber', ''),
+                        'date': withdrawal_date,
+                        'total': formatted_amount
                     }
                     
                     if order == 1:
@@ -1272,83 +980,57 @@ class SalesBillUI:
                     
                     order += 1
             
-            # แปลงตัวเลขเป็นภาษาไทย
             thai_baht_text = self.number_to_thai(total_amount)
             
-            # เตรียมข้อมูลสำหรับ template
             template_data = {
-                'DocumentTitle': 'ใบวางบิลขาย',
+                'DocumentTitle': 'ใบวางบิลสาขา',
                 
-                # ⭐ ข้อมูลบริษัท - ระบุชัดเจน
                 'Companyname': company_data.get('Companyname', 'ไม่พบข้อมูล'),
                 'SiteAddress': company_data.get('SiteAddress', 'ไม่พบข้อมูล'),
                 'PhoneNumber': company_data.get('PhoneNumber', 'ไม่พบข้อมูล'),
                 'TaxId': company_data.get('TaxId', 'ไม่พบข้อมูล'),
                 'SitePicture': company_data.get('SitePicture', ''),
                 
-                # ข้อมูลลูกค้า
-                'CustomerName': customer_detail.get('Name', ''),
-                'CustomerAddress': customer_detail.get('full_address', ''),
-                'PhoneMobile': customer_detail.get('PhoneMobile', ''),
-                'CustomerTaxNum': customer_detail.get('CustomerTaxNum', ''),
+                'BranchName': branch_detail.get('Name', ''),
+                'BranchAddress': branch_detail.get('full_address', ''),
+                'PhoneMobile': branch_detail.get('PhoneMobile', ''),
                 
-                # ข้อมูลเอกสาร
                 'DocNo': billing_doc_no,
                 'DocDate': datetime.now().strftime('%d/%m/%Y'),
                 
-                # ข้อมูลรายการแรก
-                'InvoiceNumber': first_item['docNo'] if first_item else '',
-                'InvoiceDate': first_item['date'] if first_item else '',
-                'MaxDueDate': first_item['credit'] if first_item else '',
-                'DueDate': first_item['dueDate'] if first_item else '',
+                'WithdrawalNumber': first_item['withdrawalNo'] if first_item else '',
+                'WithdrawalDate': first_item['date'] if first_item else '',
                 'Total': first_item['total'] if first_item else '0.00',
-                'PaidAmount': '0.00',
-                'UnpaidAmount': first_item['unpaidAmount'] if first_item else '0.00',
                 
-                # ข้อมูลสรุป
-                'TotalUnpaidAmount': f"{total_amount:,.2f}",
+                'TotalAmount': f"{total_amount:,.2f}",
                 'TextThaiBaht': thai_baht_text,
                 
-                # รายการเพิ่มเติม
                 'additionalItems': additional_items
             }
 
-            # Debug
-            print("\n🔍 Final template_data:")
-            print(f"Companyname: {template_data.get('Companyname')}")
-            print(f"SiteAddress: {template_data.get('SiteAddress')}")
-            print(f"CustomerName: {template_data.get('CustomerName')}")
-            print()
-
-            return template_data           
+            return template_data
+            
         except Exception as e:
             print(f"Error preparing template data: {str(e)}")
             import traceback
             traceback.print_exc()
             return {}
-        
+    
     def number_to_thai(self, amount):
         """แปลงตัวเลขเป็นตัวหนังสือภาษาไทย"""
         try:
             amount = float(amount)
-            
-            # ถ้าเป็นทศนิยม แปลงเป็นจำนวนเต็ม
             baht = int(amount)
             satang = int(round((amount - baht) * 100))
             
-            # ตัวเลข
             ones = ['', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า']
             
             def convert_group(num):
-                """แปลงเลขกลุ่ม 1-999"""
                 result = ''
-                
-                # หลักร้อย
                 hundred = num // 100
                 if hundred > 0:
                     result += ones[hundred] + 'ร้อย'
                 
-                # หลักสิบ
                 ten = (num % 100) // 10
                 if ten > 0:
                     if ten == 1:
@@ -1358,7 +1040,6 @@ class SalesBillUI:
                     else:
                         result += ones[ten] + 'สิบ'
                 
-                # หลักหนึ่ง
                 one = num % 10
                 if one > 0:
                     if ten > 0 and one == 1:
@@ -1373,12 +1054,10 @@ class SalesBillUI:
             else:
                 result = ''
                 
-                # ล้าน
                 million = baht // 1000000
                 if million > 0:
                     result += convert_group(million) + 'ล้าน'
                 
-                # แสน + หมื่น + พัน
                 hundred_thousand = (baht % 1000000) // 100000
                 if hundred_thousand > 0:
                     result += convert_group(hundred_thousand) + 'แสน'
@@ -1391,14 +1070,12 @@ class SalesBillUI:
                 if thousand > 0:
                     result += convert_group(thousand) + 'พัน'
                 
-                # ร้อย + สิบ + หนึ่ง
                 remainder = baht % 1000
                 if remainder > 0:
                     result += convert_group(remainder)
                 
                 result += 'บาท'
             
-            # ส่วนสตางค์
             if satang > 0:
                 result += convert_group(satang) + 'สตางค์'
             else:
@@ -1408,25 +1085,11 @@ class SalesBillUI:
             
         except Exception as e:
             return f'(จำนวนเงิน {amount:,.2f} บาท)'
-    
-        
-    # def convert_to_thai_text(self, amount):
-    #     """แปลงตัวเลขเป็นตัวอักษรไทย (ตัวอย่างง่าย ๆ)"""
-    #     try:
-    #         # ตัวอย่างง่าย ๆ - ในการใช้งานจริงอาจต้องใช้ library
-    #         amount_int = int(amount)
-    #         if amount_int == 0:
-    #             return "ศูนยบาทถ้วน"
-    #         elif amount_int < 1000:
-    #             return f"(จำนวน {amount_int:,.0f} บาท)"
-    #         else:
-    #             return f"(จำนวน {amount_int:,.0f} บาท)"
-    #     except:
-    #         return f"(จำนวน {amount:,.0f} บาท)"
-                        
+                            
     def reset_form(self):
-        self.selected_customer = None
-        self.selected_invoices = []
+        self.selected_branch = None
+        self.selected_withdrawals = set()
+        self.selected_withdrawal_numbers = set()
         self.show_step1()
     
     def close_window(self):
@@ -1439,9 +1102,9 @@ class SalesBillUI:
 # สำหรับทดสอบ
 if __name__ == "__main__":
     root = tk.Tk()
-    root.withdraw()  # Hide main window
+    root.withdraw()
     
     user_data = {"username": "admin", "role": "admin"}
-    app = SalesBillUI(root, user_data)
+    app = BranchBillUI(root, user_data)
     
     root.mainloop()

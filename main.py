@@ -367,18 +367,21 @@ class UltraModernUI:
     
     def open_module1(self):
         try:
+            from PurchaseBill import PurchaseBillUI
             PurchaseBillUI(self.root, self.current_user)
         except NameError:
             messagebox.showinfo("ข้อมูล", "จะเปิด Module 1: ใบวางบิลซื้อ ในสเต๊บต่อไป")
     
     def open_module2(self):
         try:
+            from SalesBill import SalesBillUI
             SalesBillUI(self.root, self.current_user)
         except NameError:
             messagebox.showinfo("ข้อมูล", "จะเปิด Module 2: ใบวางบิลขาย ในสเต๊บต่อไป")
     
     def open_module3(self):
         try:
+            from BranchBill import BranchBillUI
             BranchBillUI(self.root, self.current_user)
         except NameError:
             messagebox.showinfo("ข้อมูล", "จะเปิด Module 3: ใบวางบิลขาย [สาขา] ในสเต๊บต่อไป")
