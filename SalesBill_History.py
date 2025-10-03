@@ -28,7 +28,7 @@ class SalesBillHistoryUI:
         self.load_billing_history()
         
     def setup_window(self):
-        self.window.title("ประวัติใบวางบิลขาย - DocFlow Manager")
+        self.window.title("ประวัติใบวางบิลขาย")
         self.window.geometry("1400x800")
         self.window.configure(bg='#f8fafc')
         self.center_window()
@@ -85,7 +85,7 @@ class SalesBillHistoryUI:
         card = tk.Frame(content, bg='white', padx=20, pady=15)
         card.pack(expand=True, fill='both')
         
-        # Search and filter section
+        # Search and filter section (เหมือนเดิม)
         filter_frame = tk.Frame(card, bg='white')
         filter_frame.pack(fill='x', pady=(0, 15))
         
@@ -122,7 +122,7 @@ class SalesBillHistoryUI:
                 font=('Segoe UI', 10),
                 fg='#374151', bg='white').pack(side='left', padx=(0, 5))
 
-        # ⭐ เปลี่ยนจาก Entry เป็น DateEntry
+        # เปลี่ยนจาก Entry เป็น DateEntry
         self.date_from = DateEntry(date_frame, 
                                 font=('Segoe UI', 10), 
                                 width=12,
@@ -164,51 +164,51 @@ class SalesBillHistoryUI:
         # Treeview
         style = ttk.Style()
         style.configure("History.Treeview", 
-                       font=('Segoe UI', 10),
-                       rowheight=25)
+                    font=('Segoe UI', 10),
+                    rowheight=25)
         style.configure("History.Treeview.Heading", 
-                       font=('Segoe UI', 11, 'bold'))
+                    font=('Segoe UI', 11, 'bold'))
         
-        columns = ('BillingDocNumber', 'CreateDate', 'CustomerName', 'TotalAmount', 'TotalItems', 'CreatedBy', 'Status')
+        columns = ('BillingDocNumber', 'CreateDate', 'CustomerName', 'TotalAmount', 'TotalItems', 'CreatedBy',  'Status')
         
         self.history_tree = ttk.Treeview(table_frame, columns=columns, show='headings', 
                                         style="History.Treeview")
         
-        # Configure columns
+        # Configure columns - ปรับความกว้างให้เหมาะสม
         column_config = {
-            'BillingDocNumber': {'text': 'เลขที่เอกสาร', 'width': 120, 'anchor': 'center'},
-            'CreateDate': {'text': 'วันที่สร้าง', 'width': 120, 'anchor': 'center'},
-            'CustomerName': {'text': 'ชื่อลูกค้า', 'width': 200, 'anchor': 'w'},
+            'BillingDocNumber': {'text': 'เลขที่เอกสาร', 'width': 110, 'anchor': 'center'},
+            'CreateDate': {'text': 'วันที่สร้าง', 'width': 95, 'anchor': 'center'},
+            'CustomerName': {'text': 'ชื่อลูกค้า', 'width': 150, 'anchor': 'w'},
             'TotalAmount': {'text': 'ยอดรวม (บาท)', 'width': 100, 'anchor': 'e'},
-            'TotalItems': {'text': 'จำนวนรายการ', 'width': 100, 'anchor': 'center'},
-            'CreatedBy': {'text': 'ผู้สร้าง', 'width': 100, 'anchor': 'center'},
-            'Status': {'text': 'สถานะ', 'width': 80, 'anchor': 'center'}
+            'TotalItems': {'text': 'รายการ', 'width': 70, 'anchor': 'center'},
+            'CreatedBy': {'text': 'ผู้สร้าง', 'width': 85, 'anchor': 'center'},
+            'Status': {'text': 'สถานะ', 'width': 75, 'anchor': 'center'}
         }
         
         for col in columns:
             self.history_tree.heading(col, text=column_config[col]['text'], anchor='center')
             self.history_tree.column(col, 
-                                   width=column_config[col]['width'], 
-                                   minwidth=50,
-                                   anchor=column_config[col]['anchor'])
+                                width=column_config[col]['width'], 
+                                minwidth=50,
+                                anchor=column_config[col]['anchor'],
+                                stretch=True)  # เพิ่ม stretch
         
-        # Scrollbars
+        # Scrollbar - เหลือแค่แนวตั้ง
         v_scrollbar = ttk.Scrollbar(table_frame, orient='vertical', command=self.history_tree.yview)
-        h_scrollbar = ttk.Scrollbar(table_frame, orient='horizontal', command=self.history_tree.xview)
-        self.history_tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+        self.history_tree.configure(yscrollcommand=v_scrollbar.set)
         
-        # Pack table and scrollbars
+        # Pack table and scrollbar
         self.history_tree.pack(side='left', fill='both', expand=True)
         v_scrollbar.pack(side='right', fill='y')
-        h_scrollbar.pack(side='bottom', fill='x')
+        # ลบ h_scrollbar.pack() ออก
         
         # Bind events
         self.history_tree.bind('<Double-1>', self.on_item_double_click)
         self.history_tree.bind('<Button-1>', self.on_item_select)
         
-        # Action buttons
+        # Action buttons (เหมือนเดิม)
         action_frame = tk.Frame(card, bg='white')
-        action_frame.pack(fill='x')
+        action_frame.pack(fill='x')        
         
         # Left buttons
         left_buttons = tk.Frame(action_frame, bg='white')

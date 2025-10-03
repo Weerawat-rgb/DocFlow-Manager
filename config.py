@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import json
 import os
+from database_manager import TableManager
 
 class ConfigUI:
     def __init__(self, parent=None):
@@ -167,9 +168,10 @@ class ConfigUI:
         save_btn.pack(side='right', padx=(10, 0))
         
         save_btn.bind("<Enter>", lambda e: save_btn.config(bg='#0369a1'))
-        save_btn.bind("<Leave>", lambda e: save_btn.config(bg='#0284c7'))        
+        save_btn.bind("<Leave>", lambda e: save_btn.config(bg='#0284c7'))   
+             
     def create_database_tab(self):
-        db_frame = ttk.Frame(self.notebook)
+        db_frame = tk.Frame(self.notebook, bg='white', padx=30, pady=20)
         self.notebook.add(db_frame, text='ฐานข้อมูล')
         
         # Simple scrollable content
@@ -243,7 +245,47 @@ class ConfigUI:
         def _on_mousewheel(event):
             canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
-    
+        
+        # เพิ่มส่วนจัดการตาราง
+        table_section = tk.LabelFrame(db_frame, text="จัดการตารางฐานข้อมูล", 
+                                    font=('Segoe UI', 11, 'bold'),
+                                    bg='white', fg='#374151',
+                                    padx=20, pady=15)
+        table_section.pack(fill='x', pady=(20, 0))
+        
+        tk.Label(table_section, text="ตรวจสอบและสร้างตารางที่จำเป็นสำหรับระบบ",
+                font=('Segoe UI', 9),
+                bg='white', fg='#6b7280').pack(anchor='w', pady=(0, 15))
+        
+        # ปุ่มสร้างตาราง
+        create_tables_btn = tk.Button(table_section, text="🔧 ตรวจสอบและสร้างตาราง",
+                                    font=('Segoe UI', 10, 'bold'),
+                                    bg='#8b5cf6', fg='white',
+                                    activebackground='#7c3aed',
+                                    relief='flat', bd=0,
+                                    padx=25, pady=12,
+                                    cursor='hand2',
+                                    command=self.check_and_create_tables)
+        create_tables_btn.pack(anchor='w')
+        
+        create_tables_btn.bind("<Enter>", lambda e: create_tables_btn.config(bg='#7c3aed'))
+        create_tables_btn.bind("<Leave>", lambda e: create_tables_btn.config(bg='#8b5cf6'))
+
+    def check_and_create_tables(self):
+        """ตรวจสอบและสร้างตารางที่จำเป็น"""
+        try:
+            table_manager = TableManager()
+            result = table_manager.check_and_create_tables()
+            
+            if result['success']:
+                result_text = "\n".join(result['results'])
+                messagebox.showinfo("ผลการตรวจสอบ", f"สถานะตาราง:\n\n{result_text}")
+            else:
+                messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด:\n{result['error']}")
+                
+        except Exception as e:
+            messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด:\n{str(e)}")
+        
     def create_simple_field(self, parent, label_text, field_name, default_value="", show=None, height=1, buttons=None):
         # Simple field container
         field_container = tk.Frame(parent, bg='white')
@@ -347,16 +389,6 @@ class ConfigUI:
             # Update database config
             for field_name, widget in self.db_fields.items():
                 self.config["database"][field_name] = self.get_field_value(widget)
-            
-            # # Update company config
-            # for field_name, widget in self.company_fields.items():
-            #     self.config["application"][field_name] = self.get_field_value(widget)
-                
-            # # Update template config
-            # for field_name, widget in self.template_fields.items():
-            #     if "templates" not in self.config:
-            #         self.config["templates"] = {}
-            #     self.config["templates"][field_name] = self.get_field_value(widget)
             
             # Save to file
             if self.save_config():

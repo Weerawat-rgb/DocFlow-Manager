@@ -105,11 +105,11 @@ class BranchBillHistoryUI:
         self.search_entry.bind('<KeyRelease>', self.search_history)
         
         search_btn = tk.Button(search_container, text="ค้นหา",
-                              font=('Segoe UI', 10),
-                              bg='#10b981', fg='white',
-                              border=0, padx=8,
-                              cursor='hand2',
-                              command=self.search_history)
+                            font=('Segoe UI', 10),
+                            bg='#10b981', fg='white',
+                            border=0, padx=8,
+                            cursor='hand2',
+                            command=self.search_history)
         search_btn.pack(side='right', fill='y')
         
         # Date filter
@@ -161,42 +161,41 @@ class BranchBillHistoryUI:
         # Treeview
         style = ttk.Style()
         style.configure("History.Treeview", 
-                       font=('Segoe UI', 10),
-                       rowheight=25)
+                    font=('Segoe UI', 10),
+                    rowheight=25)
         style.configure("History.Treeview.Heading", 
-                       font=('Segoe UI', 11, 'bold'))
+                    font=('Segoe UI', 11, 'bold'))
         
         columns = ('BillingDocNumber', 'CreateDate', 'BranchName', 'TotalAmount', 'TotalItems', 'CreatedBy', 'Status')
         
         self.history_tree = ttk.Treeview(table_frame, columns=columns, show='headings', 
                                         style="History.Treeview")
         
-        # Configure columns
+        # Configure columns - ปรับความกว้างให้พอดี
         column_config = {
-            'BillingDocNumber': {'text': 'เลขที่เอกสาร', 'width': 120, 'anchor': 'center'},
-            'CreateDate': {'text': 'วันที่สร้าง', 'width': 120, 'anchor': 'center'},
-            'BranchName': {'text': 'ชื่อสาขา', 'width': 200, 'anchor': 'w'},
+            'BillingDocNumber': {'text': 'เลขที่เอกสาร', 'width': 110, 'anchor': 'center'},
+            'CreateDate': {'text': 'วันที่สร้าง', 'width': 95, 'anchor': 'center'},
+            'BranchName': {'text': 'ชื่อสาขา', 'width': 180, 'anchor': 'w'},
             'TotalAmount': {'text': 'ยอดรวม (บาท)', 'width': 100, 'anchor': 'e'},
-            'TotalItems': {'text': 'จำนวนรายการ', 'width': 100, 'anchor': 'center'},
-            'CreatedBy': {'text': 'ผู้สร้าง', 'width': 100, 'anchor': 'center'},
-            'Status': {'text': 'สถานะ', 'width': 80, 'anchor': 'center'}
+            'TotalItems': {'text': 'รายการ', 'width': 70, 'anchor': 'center'},
+            'CreatedBy': {'text': 'ผู้สร้าง', 'width': 85, 'anchor': 'center'},
+            'Status': {'text': 'สถานะ', 'width': 75, 'anchor': 'center'}
         }
         
         for col in columns:
             self.history_tree.heading(col, text=column_config[col]['text'], anchor='center')
             self.history_tree.column(col, 
-                                   width=column_config[col]['width'], 
-                                   minwidth=50,
-                                   anchor=column_config[col]['anchor'])
+                                width=column_config[col]['width'], 
+                                minwidth=50,
+                                anchor=column_config[col]['anchor'],
+                                stretch=True)
         
-        # Scrollbars
+        # Scrollbar - เหลือแค่แนวตั้ง
         v_scrollbar = ttk.Scrollbar(table_frame, orient='vertical', command=self.history_tree.yview)
-        h_scrollbar = ttk.Scrollbar(table_frame, orient='horizontal', command=self.history_tree.xview)
-        self.history_tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+        self.history_tree.configure(yscrollcommand=v_scrollbar.set)
         
         self.history_tree.pack(side='left', fill='both', expand=True)
         v_scrollbar.pack(side='right', fill='y')
-        h_scrollbar.pack(side='bottom', fill='x')
         
         # Bind events
         self.history_tree.bind('<Double-1>', self.on_item_double_click)
@@ -234,10 +233,10 @@ class BranchBillHistoryUI:
         cancel_btn.pack(side='left')
         
         self.status_label = tk.Label(action_frame, text="เลือกรายการเพื่อดูรายละเอียด",
-                                   font=('Segoe UI', 10),
-                                   fg='#6b7280', bg='white')
+                                font=('Segoe UI', 10),
+                                fg='#6b7280', bg='white')
         self.status_label.pack(side='right')
-    
+            
     def load_billing_history(self):
         """โหลดประวัติใบวางบิล"""
         try:

@@ -131,6 +131,183 @@ class DatabaseManager:
             'SitePicture': ''
         }
 
+class TableManager:
+    """Class สำหรับจัดการตารางฐานข้อมูล"""
+    
+    def __init__(self):
+        self.db_manager = DatabaseManager()
+    
+    def check_and_create_tables(self):
+        """ตรวจสอบและสร้างตารางที่จำเป็น"""
+        try:
+            conn = self.db_manager.get_connection()
+            cursor = conn.cursor()
+            
+            # ค้นหา database ที่ใช้งาน
+            database_name = self.db_manager.find_sites_table()
+            if database_name:
+                cursor.execute(f"USE [{database_name}]")
+            
+            # รายการตารางที่ต้องตรวจสอบ
+            tables_to_check = [
+                'BillingDocument',
+                'BillingDocumentItem',
+                'BranchBillingDocument',
+                'BranchBillingDocumentItem',
+                'PurchaseBillingDocument',
+                'PurchaseBillingDocumentItem'
+            ]
+            
+            results = []
+            
+            for table_name in tables_to_check:
+                # ตรวจสอบว่ามีตารางหรือไม่
+                cursor.execute("""
+                    SELECT COUNT(*) 
+                    FROM INFORMATION_SCHEMA.TABLES 
+                    WHERE TABLE_NAME = ?
+                """, (table_name,))
+                
+                exists = cursor.fetchone()[0] > 0
+                
+                if exists:
+                    results.append(f"✅ {table_name} - มีอยู่แล้ว")
+                else:
+                    # สร้างตาราง
+                    if self.create_table(cursor, table_name):
+                        results.append(f"✨ {table_name} - สร้างสำเร็จ")
+                    else:
+                        results.append(f"❌ {table_name} - สร้างไม่สำเร็จ")
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            return {
+                'success': True,
+                'results': results
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def create_table(self, cursor, table_name):
+        """สร้างตารางตามชื่อที่กำหนด"""
+        try:
+            if table_name == 'BillingDocument':
+                cursor.execute("""
+                    CREATE TABLE [dbo].[BillingDocument](
+                        [BillingDocId] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                        [BillingDocNumber] [nvarchar](20) NULL,
+                        [CustomerId] [int] NULL,
+                        [CreateDate] [datetime] NULL,
+                        [CreatedBy] [nvarchar](50) NULL,
+                        [TotalAmount] [decimal](15, 2) NULL,
+                        [TotalItems] [int] NULL,
+                        [Status] [nvarchar](20) NULL,
+                        [Notes] [nvarchar](500) NULL,
+                        [CustomerName] [nvarchar](200) NULL,
+                        [CustomerAddress] [nvarchar](500) NULL,
+                        [CustomerPhone] [nvarchar](50) NULL,
+                        [UserId] [nvarchar](50) NULL
+                    )
+                """)
+                
+            elif table_name == 'BillingDocumentItem':
+                cursor.execute("""
+                    CREATE TABLE [dbo].[BillingDocumentItem](
+                        [ItemId] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                        [BillingDocId] [int] NULL,
+                        [InvoiceNumber] [nvarchar](50) NULL,
+                        [InvoiceAmount] [decimal](15, 2) NULL,
+                        [ItemOrder] [int] NULL,
+                        [InvoiceDate] [datetime] NULL,
+                        [MaxDueDate] [int] NULL,
+                        [DueDate] [datetime] NULL,
+                        [Total] [decimal](15, 2) NULL,
+                        [PaidAmount] [decimal](15, 2) NULL,
+                        [UnpaidAmount] [decimal](15, 2) NULL
+                    )
+                """)
+                
+            elif table_name == 'BranchBillingDocument':
+                cursor.execute("""
+                    CREATE TABLE [dbo].[BranchBillingDocument](
+                        [BranchBillingDocId] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                        [BillingDocNumber] [nvarchar](50) NULL,
+                        [BranchName] [nvarchar](200) NULL,
+                        [BranchAddress] [nvarchar](500) NULL,
+                        [BranchPhone] [nvarchar](50) NULL,
+                        [CreateDate] [datetime] NULL,
+                        [CreatedBy] [nvarchar](100) NULL,
+                        [TotalAmount] [decimal](18, 2) NULL,
+                        [TotalItems] [int] NULL,
+                        [Status] [nvarchar](20) NULL,
+                        [Notes] [nvarchar](500) NULL,
+                        [UpdatedDate] [datetime] NULL,
+                        [UserId] [nvarchar](50) NULL
+                    )
+                """)
+                
+            elif table_name == 'BranchBillingDocumentItem':
+                cursor.execute("""
+                    CREATE TABLE [dbo].[BranchBillingDocumentItem](
+                        [ItemId] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                        [BranchBillingDocId] [int] NULL,
+                        [WithdrawalNumber] [nvarchar](50) NULL,
+                        [WithdrawalDate] [date] NULL,
+                        [TotalAmount] [decimal](18, 2) NULL,
+                        [ItemOrder] [int] NULL
+                    )
+                """)
+                
+            elif table_name == 'PurchaseBillingDocument':
+                cursor.execute("""
+                    CREATE TABLE [dbo].[PurchaseBillingDocument](
+                        [PurchaseBillingDocId] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                        [BillingDocNumber] [nvarchar](50) NULL,
+                        [SupplierId] [int] NULL,
+                        [SupplierName] [nvarchar](255) NULL,
+                        [SupplierAddress] [nvarchar](500) NULL,
+                        [SupplierPhone] [nvarchar](50) NULL,
+                        [CreateDate] [datetime] NULL,
+                        [CreatedBy] [nvarchar](100) NULL,
+                        [TotalAmount] [decimal](18, 2) NULL,
+                        [TotalItems] [int] NULL,
+                        [Status] [nvarchar](20) NULL,
+                        [Notes] [nvarchar](500) NULL,
+                        [UpdatedDate] [datetime] NULL,
+                        [UserId] [nvarchar](50) NULL
+                    )
+                """)
+                
+            elif table_name == 'PurchaseBillingDocumentItem':
+                cursor.execute("""
+                    CREATE TABLE [dbo].[PurchaseBillingDocumentItem](
+                        [ItemId] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                        [PurchaseBillingDocId] [int] NULL,
+                        [ReceiveNumber] [nvarchar](50) NULL,
+                        [InvoiceNumber] [nvarchar](50) NULL,
+                        [ReceiveDate] [datetime] NULL,
+                        [CreditTerm] [int] NULL,
+                        [DueDate] [datetime] NULL,
+                        [Total] [decimal](18, 2) NULL,
+                        [PaidAmount] [decimal](18, 2) NULL,
+                        [UnpaidAmount] [decimal](18, 2) NULL,
+                        [ReceiveAmount] [decimal](18, 2) NULL,
+                        [ItemOrder] [int] NULL
+                    )
+                """)
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error creating table {table_name}: {e}")
+            return False
+
 # ฟังก์ชันง่าย ๆ สำหรับใช้งาน
 def get_company_data():
     """ดึงข้อมูลบริษัท"""
