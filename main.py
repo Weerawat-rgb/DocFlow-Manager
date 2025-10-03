@@ -2,13 +2,15 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import sys
 import os
+from login import AuthService
+from login import LoginWindow
 
 # Import modules
 try:
-    from module1 import PurchaseBillUI
-    from module2 import SalesBillUI  
-    from module3 import BranchBillUI
-    from module4 import ImportBillUI
+    from PurchaseBill import PurchaseBillUI
+    from SalesBill import SalesBillUI  
+    from BranchBill import BranchBillUI
+    # from module4 import ImportBillUI
     from config import ConfigUI
 except ImportError as e:
     print(f"Module import error: {e}")
@@ -18,6 +20,7 @@ class UltraModernUI:
         self.root = tk.Tk()
         self.setup_window()
         self.current_user = None
+        self.auth_service = AuthService()
         self.show_login()
         
     def setup_window(self):
@@ -40,157 +43,14 @@ class UltraModernUI:
             widget.destroy()
     
     def show_login(self):
-        self.clear_window()
+        """แสดงหน้า Login"""
+        login_window = LoginWindow(self.root, self.on_login_success)
+        login_window.show()
         
-        # Soft gradient background - ละมุนตา
-        main_container = tk.Frame(self.root, bg='#f8fafc')
-        main_container.pack(fill='both', expand=True)
-        
-        # Subtle gradient layers - นุ่มนวล
-        gradient_layers = [
-            {'bg': '#e0e7ff', 'height': 0.4, 'y': 0},
-            {'bg': '#c7d2fe', 'height': 0.3, 'y': 0.2},
-            {'bg': '#a5b4fc', 'height': 0.2, 'y': 0.4},
-        ]
-        
-        for layer in gradient_layers:
-            grad_frame = tk.Frame(main_container, bg=layer['bg'])
-            grad_frame.place(x=0, y=0, relwidth=1, relheight=layer['height'], rely=layer['y'])
-        
-        # Settings button at top right corner
-        settings_btn = tk.Button(main_container, text="⚙️",
-                               font=('Segoe UI', 14),
-                               bg='#f8fafc', fg='#64748b',
-                               activebackground='#e2e8f0',
-                               activeforeground='#475569',
-                               border=0, padx=12, pady=8,
-                               cursor='hand2',
-                               relief='flat',
-                               command=self.show_config)
-        settings_btn.place(relx=1.0, rely=0.0, anchor='ne', x=-20, y=20)
-        
-        # Settings hover effects
-        settings_btn.bind("<Enter>", lambda e: settings_btn.config(bg='#e2e8f0', fg='#475569'))
-        settings_btn.bind("<Leave>", lambda e: settings_btn.config(bg='#f8fafc', fg='#64748b'))
-        
-        # Clean login card - เรียบสะอาด
-        login_card = tk.Frame(main_container, bg='white', padx=50, pady=50)
-        login_card.place(relx=0.5, rely=0.5, anchor='center', width=400, height=520)
-        
-        # Soft shadow effect
-        shadow = tk.Frame(main_container, bg='#e2e8f0', padx=50, pady=50)
-        shadow.place(relx=0.5, rely=0.5, anchor='center', width=400, height=520, x=3, y=3)
-        login_card.lift()
-        
-        # === HEADER SECTION ===
-        header_section = tk.Frame(login_card, bg='white', height=120)
-        header_section.pack(fill='x', pady=(0, 30))
-        header_section.pack_propagate(False)
-        
-        # Simple, clean logo
-        logo_container = tk.Frame(header_section, bg='white')
-        logo_container.pack(pady=(20, 15))
-        
-        logo_bg = tk.Frame(logo_container, bg='#6366f1', width=70, height=70)
-        logo_bg.pack()
-        logo_bg.pack_propagate(False)
-        
-        tk.Label(logo_bg, text="📊", font=('Segoe UI Emoji', 24), 
-                fg='white', bg='#6366f1').pack(expand=True)
-        
-        tk.Label(header_section, text="DocFlow Manager", 
-                font=('Segoe UI', 20, 'bold'), 
-                fg='#374151', bg='white').pack(pady=(0, 0))
-        
-        tk.Label(header_section, text="ระบบจัดการเอกสารบัญชี", 
-               font=('Segoe UI', 11), 
-               fg='#6b7280', bg='white').pack()
-        
-        # === FORM SECTION ===
-        form_section = tk.Frame(login_card, bg='white')
-        form_section.pack(fill='x', pady=(0, 30))
-        
-        # Username field
-        username_container = tk.Frame(form_section, bg='white')
-        username_container.pack(fill='x', pady=(0, 20))
-        
-        tk.Label(username_container, text="ชื่อผู้ใช้",
-                font=('Segoe UI', 10, 'bold'),
-                fg='#374151', bg='white').pack(anchor='w', pady=(0, 6))
-        
-        username_bg = tk.Frame(username_container, bg='#f9fafb', relief='solid', bd=1)
-        username_bg.pack(fill='x')
-        
-        self.username_entry = tk.Entry(username_bg, font=('Segoe UI', 11),
-                        bg='#f9fafb', fg='#374151',
-                        border=0, insertbackground='#6366f1')
-        self.username_entry.pack(fill='x', padx=14, pady=12)
-        self.username_entry.bind("<Return>", lambda event: self.handle_login())
-        
-        def on_username_focus_in(event):
-            username_bg.config(bg='#f0f9ff', relief='solid', bd=2)
-            self.username_entry.config(bg='#f0f9ff')
-            
-        def on_username_focus_out(event):
-            username_bg.config(bg='#f9fafb', relief='solid', bd=1)
-            self.username_entry.config(bg='#f9fafb')
-        
-        self.username_entry.bind("<FocusIn>", on_username_focus_in)
-        self.username_entry.bind("<FocusOut>", on_username_focus_out)
-        
-        # Password field
-        password_container = tk.Frame(form_section, bg='white')
-        password_container.pack(fill='x', pady=(0, 20))
-        
-        tk.Label(password_container, text="รหัสผ่าน",
-                font=('Segoe UI', 10, 'bold'),
-                fg='#374151', bg='white').pack(anchor='w', pady=(0, 6))
-        
-        password_bg = tk.Frame(password_container, bg='#f9fafb', relief='solid', bd=1)
-        password_bg.pack(fill='x')
-        
-        self.password_entry = tk.Entry(password_bg, font=('Segoe UI', 11),
-                        bg='#f9fafb', fg='#374151',
-                        border=0, show='•',
-                        insertbackground='#6366f1')
-        self.password_entry.pack(fill='x', padx=14, pady=12)
-        self.password_entry.bind("<Return>", lambda event: self.handle_login())
-        
-        def on_password_focus_in(event):
-            password_bg.config(bg='#f0f9ff', relief='solid', bd=2)
-            self.password_entry.config(bg='#f0f9ff')
-            
-        def on_password_focus_out(event):
-            password_bg.config(bg='#f9fafb', relief='solid', bd=1)
-            self.password_entry.config(bg='#f9fafb')
-        
-        self.password_entry.bind("<FocusIn>", on_password_focus_in)
-        self.password_entry.bind("<FocusOut>", on_password_focus_out)
-        
-        # Login button
-        login_btn = tk.Button(form_section, text="เข้าสู่ระบบ",
-                            font=('Segoe UI', 12, 'bold'),
-                            bg='#6366f1', fg='white',
-                            activebackground='#4f46e5',
-                            activeforeground='white',
-                            border=0, pady=14,
-                            cursor='hand2',
-                            relief='flat',
-                            command=self.handle_login)
-        login_btn.pack(fill='x', pady=(25, 0))
-        
-        login_btn.bind("<Enter>", lambda e: login_btn.config(bg='#4f46e5'))
-        login_btn.bind("<Leave>", lambda e: login_btn.config(bg='#6366f1'))
-        
-        # === FOOTER SECTION ===
-        footer_section = tk.Frame(login_card, bg='white')
-        footer_section.pack(side='bottom', fill='x')
-        
-        tk.Label(footer_section, text="© 2025 DocFlow Manager", 
-               font=('Segoe UI', 9), 
-               fg='#9ca3af', bg='white').pack(pady=(10, 0))
-    
-
+    def on_login_success(self, user_data):
+        """Callback เมื่อ login สำเร็จ"""
+        self.current_user = user_data
+        self.show_dashboard()
         
     def handle_login(self):
         username = self.username_entry.get().strip()
@@ -199,14 +59,17 @@ class UltraModernUI:
         if not username or not password:
             messagebox.showwarning("คำเตือน", "กรุณากรอกข้อมูลให้ครบถ้วน")
             return
-            
-        # Simple validation
-        if username == "admin" and password == "123":
-            self.current_user = {"username": username, "role": "admin"}
+        
+        # ตรวจสอบกับฐานข้อมูลผ่าน AuthService
+        user_data = self.auth_service.verify_user(username, password)
+        
+        if user_data:
+            self.current_user = user_data
+            # ลบบรรทัดนี้ออก: messagebox.showinfo("สำเร็จ", f"ยินดีต้อนรับ {username}")
             self.show_dashboard()
         else:
-            messagebox.showerror("ข้อผิดพลาด", "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
-            
+            messagebox.showerror("ข้อผิดพลาด", "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")    
+                                
     def show_message(self, message, msg_type="info"):
         if msg_type == "error":
             messagebox.showerror("ข้อผิดพลาด", message)

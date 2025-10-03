@@ -1143,6 +1143,7 @@ class SalesBillUI:
         try:
             customer_id = self.selected_customer.get('CustomerId')
             created_by = self.user_data.get('username', 'Unknown')
+            user_id = self.user_data.get('username', 'Unknown')  # เพิ่มบรรทัดนี้
             
             # ดึงเลขที่ใบแจ้งหนี้จริงจาก selected_invoices
             actual_invoice_numbers = []
@@ -1159,7 +1160,8 @@ class SalesBillUI:
             billing_doc_no = self.db.create_billing_document(
                 customer_id=customer_id,
                 invoice_numbers=actual_invoice_numbers,
-                created_by=created_by
+                created_by=created_by,
+                user_id=user_id  
             )
             
             if billing_doc_no:
@@ -1180,7 +1182,7 @@ class SalesBillUI:
         except Exception as e:
             messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด: {str(e)}")
             print(f"Error in create_billing_document: {str(e)}")
-
+            
     def show_billing_template(self, billing_doc_no, customer_id, invoice_numbers):
         """แสดงตัวอย่างใบวางบิลด้วยข้อมูลจริง"""
         try:

@@ -335,7 +335,7 @@ class SalesBillDatabase:
             return f"DOC{now.strftime('%y%m')}001"
 
     def create_billing_document(self, customer_id: int, invoice_numbers: List[str], 
-                            created_by: str) -> Optional[str]:
+                        created_by: str, user_id: str) -> Optional[str]:
         """สร้างเอกสารใบวางบิล"""
         try:
             cursor = self.connection.cursor()
@@ -415,8 +415,8 @@ class SalesBillDatabase:
             insert_header = """
             INSERT INTO BillingDocument 
             (BillingDocNumber, CustomerId, CustomerName, CustomerAddress, CustomerPhone,
-            CreateDate, CreatedBy, TotalAmount, TotalItems, Status, Notes)
-            VALUES (?, ?, ?, ?, ?, GETDATE(), ?, ?, ?, 'Active', ?)
+            CreateDate, CreatedBy, TotalAmount, TotalItems, Status, Notes, UserId)
+            VALUES (?, ?, ?, ?, ?, GETDATE(), ?, ?, ?, 'Active', ?, ?)
             """
             
             customer_name = customer_detail.get('Name', '')
@@ -426,7 +426,7 @@ class SalesBillDatabase:
             
             cursor.execute(insert_header, (
                 billing_doc_no, customer_id, customer_name, customer_address, 
-                customer_phone, created_by, total_unpaid_amount, len(invoice_details), notes
+                customer_phone, created_by, total_unpaid_amount, len(invoice_details), notes, user_id
             ))
             
             # Get billing document ID

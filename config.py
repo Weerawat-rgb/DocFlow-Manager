@@ -77,94 +77,97 @@ class ConfigUI:
             return False
     
     def create_widgets(self):
-        # Modern header
-        header = tk.Frame(self.window, bg='#6366f1', height=80)
+        # Modern header - สีเข้ม
+        header = tk.Frame(self.window, bg='#1f2937', height=80)
         header.pack(fill='x')
         header.pack_propagate(False)
         
-        header_content = tk.Frame(header, bg='#6366f1')
+        header_content = tk.Frame(header, bg='#1f2937')
         header_content.pack(expand=True, fill='both', padx=25, pady=20)
         
         tk.Label(header_content, text="⚙️ ตั้งค่าระบบ",
                 font=('Segoe UI', 18, 'bold'),
-                fg='white', bg='#6366f1').pack(anchor='w')
+                fg='white', bg='#1f2937').pack(anchor='w')
         
-        tk.Label(header_content, text="จัดการการตั้งค่าฐานข้อมูลและข้อมูลบริษัท",
-                font=('Segoe UI', 10),
-                fg='#e0e7ff', bg='#6366f1').pack(anchor='w')
+        # tk.Label(header_content, text="จัดการการตั้งค่าฐานข้อมูลและข้อมูลบริษัท",
+        #         font=('Segoe UI', 10),
+        #         fg='#d1d5db', bg='#1f2937').pack(anchor='w')
         
-        # Main content - เรียบง่าย
-        main_frame = tk.Frame(self.window, bg='#f8fafc', padx=30, pady=20)
+        # Main content - พื้นหลังขาว
+        main_frame = tk.Frame(self.window, bg='white', padx=30, pady=20)
         main_frame.pack(fill='both', expand=True)
         
-        # Simple Tab styling
+        # Tab styling - แถบ tab สีเข้ม
         style = ttk.Style()
         style.theme_use('clam')
         
         style.configure('Simple.TNotebook', 
-                       background='#f8fafc', 
-                       borderwidth=0)
+                    background='white', 
+                    borderwidth=0)
         
         style.configure('Simple.TNotebook.Tab', 
-                    background='#e2e8f0', 
-                    foreground='#475569',
+                    background='#374151',  # Tab ไม่ active - เทาเข้ม
+                    foreground='#d1d5db',
                     padding=[20, 12],        
-                    borderwidth=1,
+                    borderwidth=0,
                     focuscolor='none')
-
         style.map('Simple.TNotebook.Tab',
-                background=[('selected', '#6366f1')],
+                background=[('selected', '#1f2937')],  # Tab active - เข้มกว่า
                 foreground=[('selected', 'white')],
                 padding=[('selected', [20, 14])])  
         
-        # Simple notebook
+        # Notebook
         self.notebook = ttk.Notebook(main_frame, style='Simple.TNotebook')
         self.notebook.pack(fill='both', expand=True, pady=(0, 20))
         
         # Database tab
         self.create_database_tab()
         
-        # Template tab  
-        self.create_template_tab()
-        
-        # # Company tab  
-        # self.create_company_tab()
-        
-        
-        # Simple buttons
-        button_frame = tk.Frame(main_frame, bg='#f8fafc')
+        # Buttons - พื้นหลังขาว
+        button_frame = tk.Frame(main_frame, bg='white')
         button_frame.pack(fill='x', pady=(15, 0))
         
         # Test connection button
         test_btn = tk.Button(button_frame, text="ทดสอบการเชื่อมต่อ",
-                           font=('Segoe UI', 10, 'bold'),
-                           bg='#10b981', fg='white',
-                           relief='solid', bd=1,
-                           padx=25, pady=10,
-                           cursor='hand2',
-                           command=self.test_connection)
+                        font=('Segoe UI', 10, 'bold'),
+                        bg='#10b981', fg='white',
+                        activebackground='#059669',
+                        relief='flat', bd=0,
+                        padx=25, pady=12,
+                        cursor='hand2',
+                        command=self.test_connection)
         test_btn.pack(side='left', padx=(0, 10))
+        
+        test_btn.bind("<Enter>", lambda e: test_btn.config(bg='#059669'))
+        test_btn.bind("<Leave>", lambda e: test_btn.config(bg='#10b981'))
         
         # Cancel button
         cancel_btn = tk.Button(button_frame, text="ยกเลิก",
-                             font=('Segoe UI', 10),
-                             bg='#64748b', fg='white',
-                             relief='solid', bd=1,
-                             padx=25, pady=10,
-                             cursor='hand2',
-                             command=self.window.destroy)
+                            font=('Segoe UI', 10),
+                            bg='#6b7280', fg='white',
+                            activebackground='#4b5563',
+                            relief='flat', bd=0,
+                            padx=25, pady=12,
+                            cursor='hand2',
+                            command=self.window.destroy)
         cancel_btn.pack(side='right')
+        
+        cancel_btn.bind("<Enter>", lambda e: cancel_btn.config(bg='#4b5563'))
+        cancel_btn.bind("<Leave>", lambda e: cancel_btn.config(bg='#6b7280'))
         
         # Save button
         save_btn = tk.Button(button_frame, text="บันทึกการตั้งค่า",
-                           font=('Segoe UI', 10, 'bold'),
-                           bg='#6366f1', fg='white',
-                           relief='solid', bd=1,
-                           padx=25, pady=10,
-                           cursor='hand2',
-                           command=self.save_settings)
+                        font=('Segoe UI', 10, 'bold'),
+                        bg='#0284c7', fg='white',
+                        activebackground='#0369a1',
+                        relief='flat', bd=0,
+                        padx=25, pady=12,
+                        cursor='hand2',
+                        command=self.save_settings)
         save_btn.pack(side='right', padx=(10, 0))
-    
+        
+        save_btn.bind("<Enter>", lambda e: save_btn.config(bg='#0369a1'))
+        save_btn.bind("<Leave>", lambda e: save_btn.config(bg='#0284c7'))        
     def create_database_tab(self):
         db_frame = ttk.Frame(self.notebook)
         self.notebook.add(db_frame, text='ฐานข้อมูล')
@@ -209,8 +212,8 @@ class ConfigUI:
         self.create_simple_field(content, "รหัสผ่าน:", "password", 
                                 self.config["database"]["password"], show='•')
         
-        self.create_simple_field(content, "ไดร์เวอร์:", "driver", 
-                                self.config["database"]["driver"])
+        # self.create_simple_field(content, "ไดร์เวอร์:", "driver", 
+        #                         self.config["database"]["driver"])
         
         # Pack canvas and scrollbar
         canvas.pack(side="left", fill="both", expand=True)
@@ -221,15 +224,6 @@ class ConfigUI:
             canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
     
-       # def create_company_tab(self):
-        # company_frame = ttk.Frame(self.notebook)
-        # self.notebook.add(company_frame, text='ข้อมูลบริษัท')
-        
-        # Simple scrollable content
-        # canvas = tk.Canvas(company_frame, bg='white', highlightthickness=0)
-        # scrollbar = ttk.Scrollbar(company_frame, orient="vertical", command=canvas.yview)
-        # scrollable_frame = tk.Frame(canvas, bg='white')
-        
         scrollable_frame.bind(
             "<Configure>",
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
@@ -240,29 +234,6 @@ class ConfigUI:
         
         content = tk.Frame(scrollable_frame, bg='white', padx=40, pady=30)
         content.pack(fill='both', expand=True)
-        
-        # Simple title
-        # tk.Label(content, text="ข้อมูลบริษัท",
-        #         font=('Segoe UI', 16, 'bold'),
-        #         fg='#374151', bg='white').pack(anchor='w', pady=(0, 20))
-        
-        # Company fields
-        # self.company_fields = {}
-        
-        # self.create_simple_field(content, "ชื่อบริษัท:", "company_name", 
-        #                         self.config["application"]["company_name"])
-        
-        # self.create_simple_field(content, "ที่อยู่:", "company_address", 
-        #                         self.config["application"]["company_address"], height=3)
-        
-        # self.create_simple_field(content, "เบอร์โทร:", "company_phone", 
-        #                         self.config["application"]["company_phone"])
-        
-        # self.create_simple_field(content, "อีเมล:", "company_email", 
-        #                         self.config["application"]["company_email"])
-        
-        # self.create_simple_field(content, "เลขประจำตัวผู้เสียภาษี:", "tax_id", 
-        #                         self.config["application"]["tax_id"])
         
         # Pack canvas and scrollbar
         canvas.pack(side="left", fill="both", expand=True)
@@ -342,90 +313,7 @@ class ConfigUI:
         widget.bind("<FocusIn>", on_focus_in)
         widget.bind("<FocusOut>", on_focus_out)
         
-    def create_template_tab(self):
-        template_frame = ttk.Frame(self.notebook)
-        self.notebook.add(template_frame, text='เทมเพลทใบวางบิล')
         
-        # Simple scrollable content
-        canvas = tk.Canvas(template_frame, bg='white', highlightthickness=0)
-        scrollbar = ttk.Scrollbar(template_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas, bg='white')
-        
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        content = tk.Frame(scrollable_frame, bg='white', padx=40, pady=30)
-        content.pack(fill='both', expand=True)
-        
-        # Simple title
-        tk.Label(content, text="ตั้งค่าเทมเพลทใบวางบิล",
-                font=('Segoe UI', 16, 'bold'),
-                fg='#374151', bg='white').pack(anchor='w', pady=(0, 20))
-        
-        # Template fields
-        self.template_fields = {}
-        
-        self.create_simple_field(content, "ชื่อเทมเพลทใบวางบิลขาย:", "sales_template", 
-                                self.config.get("templates", {}).get("sales_template", "ใบวางบิลขาย"),
-                                buttons=[
-                                    ("ดูตัวอย่าง", self.preview_billing_note)
-                                ])
-        
-        # self.create_simple_field(content, "ชื่อเทมเพลทใบวางบิลซื้อ:", "purchase_template", 
-        #                         self.config.get("templates", {}).get("purchase_template", "ใบวางบิลซื้อ"),
-        #                         buttons=[
-        #                             ("ออกแบบ", lambda: self.design_template("purchase"))
-        #                         ])
-        
-        
-        # self.create_simple_field(content, "ชื่อเทมเพลทใบวางบิลสาขา:", "branch_template", 
-        #                         self.config.get("templates", {}).get("branch_template", "ใบวางบิลสาขา"),
-        #                         buttons=[
-        #                             ("ออกแบบ", lambda: self.design_template("branch")),
-        #                             ("อัพโหลด", lambda: self.upload_template("branch"))
-        #                         ])
-        
-        # self.create_simple_field(content, "หมายเหตุเพิ่มเติม:", "template_notes", 
-        #                         self.config.get("templates", {}).get("template_notes", ""), height=3)        
-        # Pack canvas and scrollbar
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        # Mouse wheel scroll
-        def _on_mousewheel(event):
-            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-        canvas.bind_all("<MouseWheel>", _on_mousewheel)
-        
-    def preview_billing_note(self):
-        """แสดงตัวอย่างใบวางบิล"""
-        from billing_note_generator import BillingNoteGenerator
-        BillingNoteGenerator.Preview_Template()
-
-        # # แล้วเปลี่ยน lambda เป็น:
-        # ("ดูตัวอย่าง", self.preview_billing_note)
-                
-    # def upload_template(self, template_type):
-        """อัพโหลดไฟล์ template"""
-        from tkinter import filedialog
-        
-        file_path = filedialog.askopenfilename(
-            title=f"เลือกไฟล์ template สำหรับ {template_type}",
-            filetypes=[
-                ("Template files", "*.json *.html *.pdf"),
-                ("All files", "*.*")
-            ]
-        )
-        
-        if file_path:
-            messagebox.showinfo("อัพโหลดสำเร็จ", f"อัพโหลดไฟล์: {file_path}")
-            # TODO: บันทึกไฟล์ template
-        
-    
     def get_field_value(self, widget):
         """Get value from either Entry or Text widget"""
         if isinstance(widget, tk.Text):
@@ -460,15 +348,15 @@ class ConfigUI:
             for field_name, widget in self.db_fields.items():
                 self.config["database"][field_name] = self.get_field_value(widget)
             
-            # Update company config
-            for field_name, widget in self.company_fields.items():
-                self.config["application"][field_name] = self.get_field_value(widget)
+            # # Update company config
+            # for field_name, widget in self.company_fields.items():
+            #     self.config["application"][field_name] = self.get_field_value(widget)
                 
-            # Update template config
-            for field_name, widget in self.template_fields.items():
-                if "templates" not in self.config:
-                    self.config["templates"] = {}
-                self.config["templates"][field_name] = self.get_field_value(widget)
+            # # Update template config
+            # for field_name, widget in self.template_fields.items():
+            #     if "templates" not in self.config:
+            #         self.config["templates"] = {}
+            #     self.config["templates"][field_name] = self.get_field_value(widget)
             
             # Save to file
             if self.save_config():
