@@ -872,12 +872,27 @@ class BranchBillUI:
                         actual_withdrawal_numbers.append(str(withdrawal_number))
             
             if not actual_withdrawal_numbers:
-                messagebox.showerror("ข้อผิดพลาด", "ไม่พบรายการใบเบิกโอนที่เลือก")
+                messagebox.showerror("ข้อผิดพลาด", "ไม่พบรายการใบเบิกโอนที่เลือก", parent=self.window)
                 return
             
             print(f"Creating billing for Branch: {branch_name}")
             print(f"Withdrawal numbers: {actual_withdrawal_numbers}")
             print(f"Created by: {created_by}")
+            
+            #เพิ่มการยืนยันก่อนสร้าง
+            confirm = messagebox.askyesno(
+                "ยืนยันการสร้างเอกสาร",
+                f"ต้องการสร้างใบวางบิลขายสาขาหรือไม่?\n\n"
+                f"ชื่อสาขา: {self.selected_branch.get('BranchName', '')}\n"
+                f"จำนวนรายการ: {len(actual_withdrawal_numbers)} รายการ\n\n"
+                f"กดยืนยันเพื่อดำเนินการต่อ",
+                icon='question',
+                parent=self.window
+            )
+            
+            if not confirm:  # ถ้ากด No ให้หยุดทำงาน
+                return
+
             
             billing_doc_no = self.db.create_billing_document(
                 branch_name=branch_name,
@@ -889,7 +904,8 @@ class BranchBillUI:
                 response = messagebox.askyesno(
                     "สำเร็จ", 
                     f"สร้างใบวางบิลสาขาเรียบร้อยแล้ว\nเลขที่เอกสาร: {billing_doc_no}\n\nคุณต้องการแสดงตัวอย่างใบวางบิลหรือไม่?",
-                    icon='question'
+                    icon='question',
+                    parent=self.window
                 )
                 
                 if response:
@@ -897,10 +913,10 @@ class BranchBillUI:
                 
                 self.reset_form()
             else:
-                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถสร้างใบวางบิลสาขาได้")
+                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถสร้างใบวางบิลสาขาได้", parent=self.window)
                 
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด: {str(e)}", parent=self.window)
             print(f"Error in create_billing_document: {str(e)}")
             import traceback
             traceback.print_exc()

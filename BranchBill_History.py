@@ -638,7 +638,7 @@ class BranchBillHistoryUI:
     def cancel_document(self):
         """ยกเลิกใบวางบิล"""
         if not self.selected_billing_doc:
-            messagebox.showwarning("คำเตือน", "กรุณาเลือกรายการที่ต้องการยกเลิก")
+            messagebox.showwarning("คำเตือน", "กรุณาเลือกรายการที่ต้องการยกเลิก", parent=self.window)
             return
         
         response = messagebox.askyesno(
@@ -648,7 +648,8 @@ class BranchBillHistoryUI:
             f"• เอกสารใบวางบิลถูกปิดการใช้งาน\n"
             f"• รายการใบเบิกโอนกลับมาเป็นสถานะ 'ยังไม่ได้วางบิล'\n\n"
             f"⚠️ การดำเนินการนี้ไม่สามารถย้อนกลับได้",
-            icon='warning'
+            icon='warning',
+            parent=self.window
         )
         
         if not response:
@@ -658,15 +659,15 @@ class BranchBillHistoryUI:
             success, message = self.db.cancel_billing_document(self.selected_billing_doc)
             
             if success:
-                messagebox.showinfo("สำเร็จ", message)
+                messagebox.showinfo("สำเร็จ", message, parent=self.window)
                 self.load_billing_history()
                 self.selected_billing_doc = None
                 self.status_label.config(text="เลือกรายการเพื่อดูรายละเอียด")
             else:
-                messagebox.showerror("ข้อผิดพลาด", message)
+                messagebox.showerror("ข้อผิดพลาด", message, parent=self.window)
                 
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถยกเลิกได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถยกเลิกได้: {str(e)}", parent=self.window)
             
     def close_window(self):
         try:

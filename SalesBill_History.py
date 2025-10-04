@@ -719,7 +719,7 @@ class SalesBillHistoryUI:
     def cancel_document(self):
         """ยกเลิกใบวางบิล"""
         if not self.selected_billing_doc:
-            messagebox.showwarning("คำเตือน", "กรุณาเลือกรายการที่ต้องการยกเลิก")
+            messagebox.showwarning("คำเตือน", "กรุณาเลือกรายการที่ต้องการยกเลิก",parent=self.window)
             return
         
         # ยืนยันการยกเลิก
@@ -730,7 +730,8 @@ class SalesBillHistoryUI:
             f"• เอกสารใบวางบิลถูกปิดการใช้งาน\n"
             f"• รายการใบแจ้งหนี้กลับมาเป็นสถานะ 'ยังไม่ได้วางบิล'\n\n"
             f"⚠️ การดำเนินการนี้ไม่สามารถย้อนกลับได้",
-            icon='warning'
+            icon='warning',
+            parent=self.window
         )
         
         if not response:
@@ -741,7 +742,7 @@ class SalesBillHistoryUI:
             success, message = self.db.cancel_billing_document(self.selected_billing_doc)
             
             if success:
-                messagebox.showinfo("สำเร็จ", message)
+                messagebox.showinfo("สำเร็จ", message,parent=self.window)
                 
                 # รีเฟรชข้อมูลในตาราง
                 self.load_billing_history()
@@ -750,10 +751,10 @@ class SalesBillHistoryUI:
                 self.selected_billing_doc = None
                 self.status_label.config(text="เลือกรายการเพื่อดูรายละเอียด")
             else:
-                messagebox.showerror("ข้อผิดพลาด", message)
+                messagebox.showerror("ข้อผิดพลาด", message,parent=self.window)
                 
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถยกเลิกได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถยกเลิกได้: {str(e)}",parent=self.window)
 
 # สำหรับทดสอบ
 if __name__ == "__main__":

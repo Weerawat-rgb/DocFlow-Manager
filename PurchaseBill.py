@@ -1141,12 +1141,36 @@ class PurchaseBillUI:
                         actual_receive_numbers.append(str(receive_number))
             
             if not actual_receive_numbers:
-                messagebox.showerror("ข้อผิดพลาด", "ไม่พบรายการใบรับสินค้าที่เลือก")
+                messagebox.showerror("ข้อผิดพลาด", "ไม่พบรายการใบรับสินค้าที่เลือก", parent=self.window)
                 return
             
             print(f"Creating billing for Supplier ID: {supplier_id}")
             print(f"Receive numbers: {actual_receive_numbers}")
             print(f"Created by: {created_by}")
+            
+            #เพิ่มการยืนยันก่อนสร้าง
+            confirm = messagebox.askyesno(
+                "ยืนยันการสร้างเอกสาร",
+                f"ต้องการสร้างใบวางบิลซื้อหรือไม่?\n\n"
+                f"ซัพพลายเออร์: {self.selected_customer.get('Name', '')}\n"
+                f"จำนวนรายการ: {len(actual_receive_numbers)} รายการ\n\n"
+                f"กดยืนยันเพื่อดำเนินการต่อ",
+                icon='question',
+                parent=self.window
+            )
+            
+            if not confirm:  # ถ้ากด No ให้หยุดทำงาน
+                return
+            
+            # print(f"Creating billing for Supplier ID: {supplier_id}")
+            # print(f"Receive numbers: {actual_receive_numbers}")
+            # print(f"Created by: {created_by}")
+            
+            # billing_doc_no = self.db.create_billing_document(
+            #     supplier_id=supplier_id,
+            #     receive_numbers=actual_receive_numbers,
+            #     created_by=created_by
+            # )
             
             billing_doc_no = self.db.create_billing_document(
                 supplier_id=supplier_id,
@@ -1159,18 +1183,19 @@ class PurchaseBillUI:
                 response = messagebox.askyesno(
                     "สำเร็จ", 
                     f"สร้างใบวางบิลเรียบร้อยแล้ว\nเลขที่เอกสาร: {billing_doc_no}\n\nคุณต้องการแสดงตัวอย่างใบวางบิลหรือไม่?",
-                    icon='question'
+                    icon='question',
+                    parent=self.window
+                    
                 )
                 
                 if response:
-                    self.show_billing_template(billing_doc_no, supplier_id, actual_receive_numbers)
-                
+                    self.show_billing_template(billing_doc_no, supplier_id, actual_receive_numbers)              
                 self.reset_form()
             else:
-                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถสร้างใบวางบิลได้")
+                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถสร้างใบวางบิลได้", parent=self.window)
                 
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด: {str(e)}", parent=self.window)
             print(f"Error in create_billing_document: {str(e)}")
             import traceback
             traceback.print_exc()

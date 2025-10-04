@@ -1154,7 +1154,21 @@ class SalesBillUI:
                         actual_invoice_numbers.append(str(invoice_number))
             
             if not actual_invoice_numbers:
-                messagebox.showerror("ข้อผิดพลาด", "ไม่พบรายการใบแจ้งหนี้ที่เลือก")
+                messagebox.showerror("ข้อผิดพลาด", "ไม่พบรายการใบแจ้งหนี้ที่เลือก", parent=self.window)
+                return
+            
+            #เพิ่มการยืนยันก่อนสร้าง
+            confirm = messagebox.askyesno(
+                "ยืนยันการสร้างเอกสาร",
+                f"ต้องการสร้างใบวางบิลขายหรือไม่?\n\n"
+                f"ชื่อลูกค้า: {self.selected_customer.get('Name', '')}\n"
+                f"จำนวนรายการ: {len(actual_invoice_numbers)} รายการ\n\n"
+                f"กดยืนยันเพื่อดำเนินการต่อ",
+                icon='question',
+                parent=self.window
+            )
+            
+            if not confirm:  # ถ้ากด No ให้หยุดทำงาน
                 return
             
             billing_doc_no = self.db.create_billing_document(
@@ -1169,7 +1183,9 @@ class SalesBillUI:
                 response = messagebox.askyesno(
                     "สำเร็จ", 
                     f"สร้างใบวางบิลเรียบร้อยแล้ว\nเลขที่เอกสาร: {billing_doc_no}\n\nคุณต้องการแสดงตัวอย่างใบวางบิลหรือไม่?",
-                    icon='question'
+                    icon='question',
+                    parent=self.window
+                    
                 )
                 
                 if response:  # ถ้าตอบ Yes
@@ -1177,10 +1193,10 @@ class SalesBillUI:
                 
                 self.reset_form()
             else:
-                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถสร้างใบวางบิลได้")
+                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถสร้างใบวางบิลได้", parent=self.window)
                 
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด: {str(e)}", parent=self.window)
             print(f"Error in create_billing_document: {str(e)}")
             
     def show_billing_template(self, billing_doc_no, customer_id, invoice_numbers):
