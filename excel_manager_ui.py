@@ -5,7 +5,7 @@ import pandas as pd
 from typing import Optional
 import threading
 from excel_manager_database import ExcelManagerDatabase
-# from utils import set_window_icon
+from utils import set_window_icon
 
 class ExcelManagerUI:
     """UI สำหรับจัดการ Import Excel"""
@@ -16,7 +16,7 @@ class ExcelManagerUI:
         self.receive_id = receive_id  # ถ้ามี = import เข้า receive ที่มีอยู่, ถ้าไม่มี = สร้างใหม่
         self.supplier_id = supplier_id  # รหัสซัพพลายเออร์ (default = 30)
         self.window = tk.Toplevel(parent)
-        # set_window_icon(self.window)
+        set_window_icon(self.window)
         
         # Initialize variables
         self.import_file_path = None

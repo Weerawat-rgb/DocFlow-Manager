@@ -93,7 +93,7 @@ class ExcelManagerDatabase:
         try:
             current_date = datetime.now()
             date_str = current_date.strftime('%d%m%y')  # 051224
-            prefix = f'U-01 {date_str} '
+            prefix = f'U-01{date_str}'
             
             # หา running number ล่าสุดของวันนี้
             query = """
