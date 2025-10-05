@@ -2,12 +2,14 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 from BranchBill_database import BranchBillDatabase
+from utils import set_window_icon
 
 class BranchBillUI:
     def __init__(self, parent, user_data):
         self.parent = parent
         self.user_data = user_data
         self.window = tk.Toplevel(parent)
+        set_window_icon(self.window)
         
         # Initialize variables first
         self.current_step = 1

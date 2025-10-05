@@ -3,6 +3,7 @@ import json
 from typing import List, Dict, Optional
 from datetime import datetime
 
+
 class PurchaseBillDatabase:
     def __init__(self, config_file='config.json'):
         """Initialize database connection using config file"""

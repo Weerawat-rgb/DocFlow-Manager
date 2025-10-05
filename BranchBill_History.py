@@ -3,12 +3,14 @@ from tkinter import ttk, messagebox
 from datetime import datetime, timedelta
 from BranchBill_database import BranchBillDatabase
 from tkcalendar import DateEntry
+from utils import set_window_icon
 
 class BranchBillHistoryUI:
     def __init__(self, parent, user_data):
         self.parent = parent
         self.user_data = user_data
         self.window = tk.Toplevel(parent)
+        set_window_icon(self.window)
         self.setup_window()
         
         # Initialize database

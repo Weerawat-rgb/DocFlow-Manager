@@ -1,6 +1,8 @@
 import json
 import pyodbc
 import base64
+import os
+import sys
 
 class DatabaseManager:
     def __init__(self):
@@ -9,7 +11,19 @@ class DatabaseManager:
     def load_config(self):
         """โหลด config.json"""
         try:
-            with open(r'D:\_project\DocFlow-Manager\config.json', 'r', encoding='utf-8') as f:
+            # รองรับทั้งการรันจาก .py และ .exe
+            if getattr(sys, 'frozen', False):
+                # ถ้ารันจาก .exe
+                base_path = os.path.dirname(sys.executable)
+            else:
+                # ถ้ารันจาก .py
+                base_path = os.path.dirname(__file__)
+            
+            config_path = os.path.join(base_path, 'config.json')
+            
+            print(f"Loading config from: {config_path}")  # debug
+            
+            with open(config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
             print(f"Error loading config: {e}")

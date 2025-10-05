@@ -1,12 +1,16 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 import json
 import pyodbc
 from Crypto.Cipher import DES
 import base64
 from PIL import Image, ImageTk
 import io
+import sys
+import os
 from database_manager import DatabaseManager 
+from utils import set_window_icon
+
 
 
 class CryptoHelper:
@@ -110,7 +114,15 @@ class Database:
     def load_config(self, config_file):
         """โหลด config จากไฟล์ JSON"""
         try:
-            with open(config_file, 'r', encoding='utf-8') as f:
+            # รองรับ .exe
+            if getattr(sys, 'frozen', False):
+                base_path = os.path.dirname(sys.executable)
+            else:
+                base_path = os.path.dirname(__file__)
+            
+            config_path = os.path.join(base_path, config_file)
+            
+            with open(config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
             print(f"ไม่สามารถโหลด config ได้: {e}")
@@ -228,6 +240,21 @@ class LoginWindow:
         self.username_entry = None
         self.password_entry = None
         self.logo_image = None
+    #     self.set_window_icon()
+        
+    # def set_window_icon(self):
+    #     try:
+    #         # ถ้ารัน .exe ใช้ _MEIPASS
+    #         if getattr(sys, 'frozen', False):
+    #             base_path = sys._MEIPASS
+    #         else:
+    #             base_path = os.path.dirname(__file__)
+            
+    #         icon_path = os.path.join(base_path, 'bill.ico')
+    #         self.root.iconbitmap(icon_path)
+    #     except Exception as e:
+    #         print(f"ไม่สามารถโหลด icon ได้: {e}")
+
             
     def load_logo_from_db(self):
         """โหลด Logo จากฐานข้อมูล"""

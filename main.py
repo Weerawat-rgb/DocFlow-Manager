@@ -10,7 +10,7 @@ try:
     from PurchaseBill import PurchaseBillUI
     from SalesBill import SalesBillUI  
     from BranchBill import BranchBillUI
-    # from module4 import ImportBillUI
+    from excel_manager_ui import ExcelManagerUI
     from config import ConfigUI
 except ImportError as e:
     print(f"Module import error: {e}")
@@ -19,16 +19,29 @@ class UltraModernUI:
     def __init__(self):
         self.root = tk.Tk()
         self.setup_window()
+        self.set_window_icon(self.root)
         self.current_user = None
         self.auth_service = AuthService()
         self.show_login()
         
     def setup_window(self):
-        self.root.title("DocFlow Manager - Ultra Modern Edition")
+        self.root.title("โปรแกรมออกใบวางบิล v1.0")
         self.root.geometry("1200x800")
         self.root.configure(bg='#0a0e27')
         # self.root.state('zoomed')
         self.center_window()
+        
+    @staticmethod
+    def set_window_icon(window):
+        """ตั้งค่า icon สำหรับ window ทุกตัว"""
+        try:
+            if getattr(sys, 'frozen', False):
+                window.iconbitmap(sys.executable)
+            else:
+                icon_path = os.path.join(os.path.dirname(__file__), 'bill.ico')
+                window.iconbitmap(icon_path)
+        except Exception as e:
+            print(f"ไม่สามารถโหลด icon ได้: {e}")
         
     def center_window(self):
         self.root.update_idletasks()
@@ -251,7 +264,7 @@ class UltraModernUI:
     
     def open_module4(self):
         try:
-            ImportBillUI(self.root, self.current_user)
+            ExcelManagerUI(self.root, self.current_user)
         except NameError:
             messagebox.showinfo("ข้อมูล", "จะเปิด Module 4: Import ใบรับเข้าสินค้า ในสเต๊บต่อไป")
     

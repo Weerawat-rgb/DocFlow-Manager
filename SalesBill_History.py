@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 from datetime import datetime, timedelta
 from SalesBill_database import SalesBillDatabase
 from tkcalendar import DateEntry
+from utils import set_window_icon
 
 class SalesBillHistoryUI:
     def __init__(self, parent, user_data):
@@ -10,6 +11,7 @@ class SalesBillHistoryUI:
         self.user_data = user_data
         self.window = tk.Toplevel(parent)
         self.setup_window()
+        set_window_icon(self.window)
         
         # Initialize database
         try:

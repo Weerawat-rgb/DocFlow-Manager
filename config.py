@@ -1,15 +1,19 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox
 import json
 import os
+import sys
 from database_manager import TableManager
+from utils import set_window_icon
 
 class ConfigUI:
     def __init__(self, parent=None):
         self.window = tk.Toplevel(parent) if parent else tk.Tk()
-        self.window.title("ตั้งค่าระบบ - DocFlow Manager")
+        set_window_icon(self.window)
+        self.window.title("ตั้งค่าระบบ")
         self.window.geometry("750x700")  # เพิ่มความสูง
         self.window.configure(bg='#f8fafc')
+        self.set_window_icon()
         
         if parent:
             self.window.transient(parent)
@@ -22,6 +26,18 @@ class ConfigUI:
         self.config = self.load_config()
         
         self.create_widgets()
+        
+    def set_window_icon(self):
+        try:
+            if getattr(sys, 'frozen', False):
+                # ถ้ารันจาก .exe
+                self.window.iconbitmap(sys.executable)
+            else:
+                # ถ้ารันจาก .py
+                icon_path = os.path.join(os.path.dirname(__file__), 'bill.ico')
+                self.window.iconbitmap(icon_path)
+        except Exception as e:
+            print(f"ไม่สามารถโหลด icon ได้: {e}")
         
     def center_window(self):
         self.window.update_idletasks()
