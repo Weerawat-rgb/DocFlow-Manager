@@ -10,10 +10,10 @@ from utils import set_window_icon
 class ExcelManagerUI:
     """UI สำหรับจัดการ Import Excel"""
     
-    def __init__(self, parent, user_data, receive_id=None, supplier_id=30):
+    def __init__(self, parent, user_data, supplier_id=30):
         self.parent = parent
         self.user_data = user_data
-        self.receive_id = receive_id  # ถ้ามี = import เข้า receive ที่มีอยู่, ถ้าไม่มี = สร้างใหม่
+        # self.receive_id = receive_id  # ถ้ามี = import เข้า receive ที่มีอยู่, ถ้าไม่มี = สร้างใหม่
         self.supplier_id = supplier_id  # รหัสซัพพลายเออร์ (default = 30)
         self.window = tk.Toplevel(parent)
         set_window_icon(self.window)
@@ -70,10 +70,7 @@ class ExcelManagerUI:
         left_frame = tk.Frame(header_content, bg='#1f2937')
         left_frame.pack(side='left', fill='y')
         
-        if self.receive_id:
-            title = f"นำเข้าข้อมูล Excel - ใบรับสินค้า #{self.receive_id}"
-        else:
-            title = "นำเข้าข้อมูล Excel - สร้างใบรับสินค้าใหม่"
+        title = "นำเข้าข้อมูล Excel - สร้างใบรับสินค้าใหม่"
         
         tk.Label(left_frame, text=title, 
                 font=('Segoe UI', 18, 'bold'), 
@@ -470,7 +467,7 @@ class ExcelManagerUI:
                         # ลองใช้ฟิลด์ที่มีในตาราง Items
                         'ItemDesc': item_data.get('ItemName') or item_data.get('ItemDesc') or item_data.get('Description') or '',
                         'RetailPrice': item_data.get('RetailPrice', 0),
-                        'ItemUnitInStock': item_data.get('UnitsInStock', 0),
+                        'ItemUnitInStock': item_data.get('ItemUnitInStock', 0),
                         'ItemUnitId': item_unit_id,
                         'ItemUnitId2': item_unit_id2,
                         'ItemUnitId2Name': unit2_name,  # ชื่อหน่วยรอง
@@ -479,6 +476,8 @@ class ExcelManagerUI:
                         'TaxId': item_data.get('TaxId', 1),
                         'TaxPercent': item_data.get('TaxPercent', 0),
                         'UnitName': unit_name,  # ชื่อหน่วยหลักจาก ItemUnit
+                        'AvgCost': item_data.get('AvgCost', 0),
+                        'ParentItemId': item_data.get('ParentItemId', 0),
                         '_has_error': False  # ไม่มี error
                     })
                     enriched_data.append(enriched_row)
@@ -586,7 +585,6 @@ class ExcelManagerUI:
             'ItemDesc',
             'UnitCost',             # เพิ่มราคาทุน
             'RetailPrice',
-            'ItemUnitInStock',
             'QtyReceived',
             'ItemUnitId2Name',
             'ItemUnitId2Multiply'
@@ -601,7 +599,6 @@ class ExcelManagerUI:
             'ItemDesc': 'รายละเอียดสินค้า',
             'UnitCost': 'ราคาทุน',           # เพิ่ม
             'RetailPrice': 'ราคาขาย',
-            'ItemUnitInStock': 'คงคลัง',
             'QtyReceived': 'จำนวนรับ',
             'ItemUnitId2Name': 'สั่งซื้อ',
             'ItemUnitId2Multiply': 'ตัวคูณ'
@@ -613,7 +610,6 @@ class ExcelManagerUI:
             'ItemDesc': 220,
             'UnitCost': 100,                  # เพิ่ม
             'RetailPrice': 100,
-            'ItemUnitInStock': 90,
             'QtyReceived': 90,
             'ItemUnitId2Name': 100,
             'ItemUnitId2Multiply': 90
@@ -625,7 +621,6 @@ class ExcelManagerUI:
             'ItemDesc': 'w',
             'UnitCost': 'e',                  # เพิ่ม - ชิดขวา
             'RetailPrice': 'e',
-            'ItemUnitInStock': 'center',
             'QtyReceived': 'center',
             'ItemUnitId2Name': 'center',
             'ItemUnitId2Multiply': 'center'
@@ -795,7 +790,7 @@ class ExcelManagerUI:
             messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถตรวจสอบข้อมูลได้: {str(e)}", parent=self.window)
     
     def import_from_excel(self):
-        """Import ข้อมูลจาก Excel"""
+        """Import ข้อมูลจาก Excel - สร้างใบรับใหม่ทุกครั้ง"""
         if not self.import_data:
             messagebox.showwarning("คำเตือน", "กรุณาเลือกไฟล์ก่อน", parent=self.window)
             return
@@ -835,23 +830,14 @@ class ExcelManagerUI:
                 )
                 return
             
-            # สร้างข้อความยืนยัน
-            if self.receive_id:
-                confirm_msg = (
-                    f"ต้องการ Import ข้อมูล {valid_count} รายการ เข้าสู่ใบรับสินค้าที่มีอยู่หรือไม่?\n\n"
-                    f"ใบรับสินค้า: #{self.receive_id}\n"
-                    f"จำนวนรวม: {total_qty:,.0f} หน่วย\n"
-                    f"จำนวนหมวดหมู่: {len(categories)} หมวด\n\n"
-                    f"⚠️ การดำเนินการนี้จะเพิ่มข้อมูลเข้าในฐานข้อมูล"
-                )
-            else:
-                confirm_msg = (
-                    f"ต้องการสร้างใบรับสินค้าใหม่และ Import ข้อมูล {valid_count} รายการหรือไม่?\n\n"
-                    f"จำนวนรวม: {total_qty:,.0f} หน่วย\n"
-                    f"จำนวนหมวดหมู่: {len(categories)} หมวด\n"
-                    f"ซัพพลายเออร์: {self.supplier_id}\n\n"
-                    f"⚠️ ระบบจะสร้างเอกสารใหม่ และเพิ่มข้อมูลเข้าในฐานข้อมูล"
-                )
+            # สร้างข้อความยืนยัน - ลบ if-else ออก เหลือแค่ case เดียว
+            confirm_msg = (
+                f"ต้องการสร้างใบรับสินค้าใหม่และ Import ข้อมูล {valid_count} รายการหรือไม่?\n\n"
+                f"จำนวนรวม: {total_qty:,.0f} หน่วย\n"
+                f"จำนวนหมวดหมู่: {len(categories)} หมวด\n"
+                # f"ซัพพลายเออร์: {self.supplier_id}\n\n"
+                # f"⚠️ ระบบจะสร้างเอกสารใหม่ และเพิ่มข้อมูลเข้าในฐานข้อมูล"
+            )
             
             # Confirm
             response = messagebox.askyesno(
@@ -867,27 +853,24 @@ class ExcelManagerUI:
             self.window.config(cursor="wait")
             self.window.update()
             
-            receive_id = self.receive_id
-            receive_number = None
+            # ลบ receive_id = self.receive_id ออก
+            # สร้างเอกสารใหม่ทุกครั้ง
+            success, message, receive_id = self.db.create_receive_document(
+                self.user_data['username'],
+                self.supplier_id
+            )
             
-            # ถ้ายังไม่มี receive_id ให้สร้างเอกสารใหม่
-            if not receive_id:
-                success, message, receive_id = self.db.create_receive_document(
-                    self.user_data['username'],
-                    self.supplier_id
+            if not success:
+                self.window.config(cursor="")
+                messagebox.showerror(
+                    "ข้อผิดพลาด",
+                    f"ไม่สามารถสร้างเอกสารได้\n\n{message}",
+                    parent=self.window
                 )
-                
-                if not success:
-                    self.window.config(cursor="")
-                    messagebox.showerror(
-                        "ข้อผิดพลาด",
-                        f"ไม่สามารถสร้างเอกสารได้\n\n{message}",
-                        parent=self.window
-                    )
-                    return
-                
-                receive_number = message.split(' ')[1]  # ดึง receive number จาก message
-                
+                return
+            
+            receive_number = message.split(' ')[1]  # ดึง receive number จาก message
+            
             # Import ข้อมูล
             success, message, result = self.db.import_receive_items(
                 receive_id,
@@ -898,24 +881,8 @@ class ExcelManagerUI:
             self.window.config(cursor="")
             
             if success:
-                # Log activity
-                try:
-                    self.db.log_import_activity(
-                        self.user_data['username'],
-                        result['success_count'],
-                        result['error_count'],
-                        self.import_file_path
-                    )
-                except:
-                    pass  # ถ้า log ไม่สำเร็จไม่ต้องแสดง error
-                
                 success_msg = f"✓ {message}\n\n"
-                
-                if receive_number:
-                    success_msg += f"เอกสาร: {receive_number}\n"
-                else:
-                    success_msg += f"ใบรับสินค้า: #{receive_id}\n"
-                
+                success_msg += f"เอกสาร: {receive_number}\n"  # ลบ if-else ออก
                 success_msg += (
                     f"สำเร็จ: {result['success_count']} รายการ\n"
                     f"ผิดพลาด: {result['error_count']} รายการ\n"
@@ -929,9 +896,9 @@ class ExcelManagerUI:
                     parent=self.window
                 )
                 
-                # อัพเดท receive_id ถ้าสร้างใหม่
-                if not self.receive_id:
-                    self.receive_id = receive_id
+                # ลบส่วนนี้ออก - ไม่ต้องเก็บ receive_id แล้ว
+                # if not self.receive_id:
+                #     self.receive_id = receive_id
                 
                 # Clear data after successful import
                 self.clear_data()
@@ -949,7 +916,7 @@ class ExcelManagerUI:
         except Exception as e:
             self.window.config(cursor="")
             messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถ Import ได้: {str(e)}", parent=self.window)
-    
+                
     def clear_data(self):
         """ล้างข้อมูลทั้งหมด"""
         self.import_file_path = None
@@ -993,14 +960,6 @@ if __name__ == "__main__":
     
     user_data = {"username": "admin", "role": "admin"}
     
-    # ตัวอย่าง 1: สร้างใบรับสินค้าใหม่ (ไม่ใส่ receive_id)
-    # app = ExcelManagerUI(root, user_data, receive_id=None, supplier_id=30)
-    
-    # ตัวอย่าง 2: Import เข้าใบรับสินค้าที่มีอยู่
-    # receive_id = 12345
-    # app = ExcelManagerUI(root, user_data, receive_id=receive_id)
-    
-    # Default: สร้างใหม่
-    app = ExcelManagerUI(root, user_data, receive_id=None, supplier_id=30)
+    app = ExcelManagerUI(root, user_data, supplier_id=30)
     
     root.mainloop()

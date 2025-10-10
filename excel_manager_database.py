@@ -87,49 +87,70 @@ class ExcelManagerDatabase:
     def get_next_lot_number(self) -> str:
         """
         สร้างเลขที่ Lot
-        Format: U-01 ddmmyy 001 (เช่น U-01 051224 001)
+        Format: U-01ddmmyy001 (เช่น U-01051224001) - ไม่เว้นวรรค
         รีเซ็ทตามวัน
         """
         try:
             current_date = datetime.now()
-            date_str = current_date.strftime('%d%m%y')  # 051224
-            prefix = f'U-01{date_str}'
+            buddhist_year = current_date.year + 543  
+            year_str = str(buddhist_year)[-2:]       
+            # สร้าง date string
+            date_str = current_date.strftime('%d%m') + year_str  
+            prefix = f'U-01{date_str}'  
             
             # หา running number ล่าสุดของวันนี้
             query = """
                 SELECT TOP 1 Lot 
                 FROM Receive 
-                WHERE Lot LIKE ?
+                WHERE Lot LIKE ? AND Lot IS NOT NULL
                 ORDER BY Lot DESC
             """
             
             self.cursor.execute(query, f'{prefix}%')
             row = self.cursor.fetchone()
             
-            if row:
-                # ดึง running number จาก format U-01 051224 001
-                last_number = row[0].split(' ')[-1]
-                running = int(last_number) + 1
+            if row and row[0]:
+                try:
+                    # ดึง running number จาก format U-01051224001
+                    # เอา 3 ตัวสุดท้าย
+                    lot_str = row[0].strip()
+                    if len(lot_str) >= 3:
+                        last_number = lot_str[-3:]  # เอา 3 ตัวสุดท้าย
+                        running = int(last_number) + 1
+                    else:
+                        running = 1
+                except (ValueError, IndexError) as e:
+                    print(f"Warning: ไม่สามารถ parse Lot number '{row[0]}' ได้ เริ่มใหม่ที่ 001")
+                    running = 1
             else:
                 running = 1
             
-            # สร้างเลขที่ Lot
+            # สร้างเลขที่ Lot (ไม่เว้นวรรค)
             lot_number = f"{prefix}{running:03d}"
             
             return lot_number
             
         except Exception as e:
-            raise Exception(f"Failed to generate lot number: {str(e)}")
+            print(f"Warning: ไม่สามารถสร้าง lot number ได้: {str(e)}")
+            # ถ้า error ให้ใช้ default
+            current_date = datetime.now()
+            date_str = current_date.strftime('%d%m%y')
+            return f"U-01{date_str}001"
     
     def get_next_receive_number(self) -> str:
         """
         สร้างเลขที่เอกสารรับสินค้า
-        Format: RC+yymm/running number 3 digits (เช่น RC2510/001)
+        Format: RC+yymm/running number 3 digits (เช่น RC6810/001) - yy เป็นปี พ.ศ.
         """
         try:
-            # หา yymm ปัจจุบัน
             current_date = datetime.now()
-            yymm = current_date.strftime('%y%m')  # เช่น 2510
+            
+            # คำนวณปี พ.ศ. (พุทธศักราช = ค.ศ. + 543)
+            buddhist_year = current_date.year + 543
+            year_str = str(buddhist_year)[-2:]  # เอา 2 หลักสุดท้าย เช่น 68
+            
+            # สร้าง yymm (6810 = ตุลาคม 2568)
+            yymm = year_str + current_date.strftime('%m')
             prefix = f'RC{yymm}/'
             
             # หา running number ล่าสุด
@@ -144,9 +165,13 @@ class ExcelManagerDatabase:
             row = self.cursor.fetchone()
             
             if row:
-                # ดึง running number จาก format RC2510/001
-                last_number = row[0].split('/')[-1]
-                running = int(last_number) + 1
+                try:
+                    # ดึง running number จาก format RC6810/001
+                    last_number = row[0].split('/')[-1]
+                    running = int(last_number) + 1
+                except (ValueError, IndexError) as e:
+                    print(f"Warning: ไม่สามารถ parse ReceiveNumber '{row[0]}' ได้ เริ่มใหม่ที่ 001")
+                    running = 1
             else:
                 running = 1
             
@@ -157,7 +182,7 @@ class ExcelManagerDatabase:
             
         except Exception as e:
             raise Exception(f"Failed to generate receive number: {str(e)}")
-    
+            
     def create_receive_document(self, username: str, supplier_id: int = 30) -> Tuple[bool, str, Optional[int]]:
         """
         สร้างเอกสารรับสินค้า
@@ -402,17 +427,7 @@ class ExcelManagerDatabase:
     
     def import_receive_items(self, receive_id: int, data: List[Dict], 
                             user_id: str) -> Tuple[bool, str, Dict]:
-        """
-        นำเข้าข้อมูล ReceiveItem
-        
-        Args:
-            receive_id: เลขที่ใบรับสินค้า (Id จากตาราง Receive)
-            data: ข้อมูลที่จะ import (ต้อง validate แล้ว)
-            user_id: ผู้ทำรายการ
-            
-        Returns:
-            (success, message, result)
-        """
+        """นำเข้าข้อมูล ReceiveItem"""
         try:
             # เริ่ม transaction
             self.connection.autocommit = False
@@ -423,37 +438,12 @@ class ExcelManagerDatabase:
             
             insert_query = """
                 INSERT INTO ReceiveItem (
-                    ReceiveId,
-                    ItemId,
-                    QtyReceived,
-                    UnitCost,
-                    AveCost,
-                    RetailPrice,
-                    UnitsInStock,
-                    InsertDate,
-                    PurchaserOrderItemId,
-                    TotalCost,
-                    Multiply,
-                    UnitName,
-                    TaxId,
-                    Tax,
-                    TaxPercent,
-                    InitCost,
-                    TotalInitCost,
-                    DCPercent1,
-                    DCAmount1,
-                    DCPercent2,
-                    DCAmount2,
-                    DCPercent3,
-                    DCAmount3,
-                    TotalDiscount,
-                    OrderQty,
-                    ExpireDate,
-                    RemainQty,
-                    LotBalanceQty,
-                    ItemDesc,
-                    LineNum,
-                    Remarks,
+                    ReceiveId, ItemId, QtyReceived, UnitCost, AveCost, RetailPrice,
+                    UnitsInStock, InsertDate, PurchaserOrderItemId, TotalCost,
+                    Multiply, UnitName, TaxId, Tax, TaxPercent, InitCost,
+                    TotalInitCost, DCPercent1, DCAmount1, DCPercent2, DCAmount2,
+                    DCPercent3, DCAmount3, TotalDiscount, OrderQty, ExpireDate,
+                    RemainQty, LotBalanceQty, ItemDesc, LineNum, Remarks,
                     ManufacturingDate
                 )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -467,19 +457,55 @@ class ExcelManagerDatabase:
                         error_details.append(f"แถวที่ {idx}: ข้ามเนื่องจากไม่พบข้อมูลสินค้า")
                         continue
                     
-                    # ดึงข้อมูลจาก row
-                    item_id = row.get('ItemId')
-                    qty_received = float(row.get('QtyReceived', 0))
-                    retail_price = float(row.get('RetailPrice', 0))
-                    tax_percent = float(row.get('TaxPercent', 0))
+                    # ฟังก์ชันช่วยแปลงค่าเป็น float อย่างปลอดภัย
+                    def safe_float(value, default=0.0):
+                        """แปลงค่าเป็น float อย่างปลอดภัย"""
+                        if value is None or value == '' or value == 'None':
+                            return default
+                        try:
+                            result = float(value)
+                            # ตรวจสอบ NaN และ Infinity
+                            if result != result or result == float('inf') or result == float('-inf'):
+                                return default
+                            return result
+                        except (ValueError, TypeError):
+                            return default
                     
-                    # ใช้ UnitCost จาก Excel - ทุก cost ใช้ค่านี้
-                    unit_cost = float(row.get('UnitCost', 0))
+                    def safe_int(value, default=0):
+                        """แปลงค่าเป็น int อย่างปลอดภัย"""
+                        if value is None or value == '' or value == 'None':
+                            return default
+                        try:
+                            return int(float(value))
+                        except (ValueError, TypeError):
+                            return default
                     
-                    # คำนวณส่วนลด (ถ้ามี)
-                    dc_percent1 = float(row.get('DCPercent1', 0))
-                    dc_percent2 = float(row.get('DCPercent2', 0))
-                    dc_percent3 = float(row.get('DCPercent3', 0))
+                    # ดึงข้อมูลจาก row พร้อมตรวจสอบ
+                    item_id = safe_int(row.get('ParentItemId'))
+                    if item_id == 0:
+                        item_id = safe_int(row.get('ItemId'))
+                    qty_received = safe_float(row.get('QtyReceived', 0))
+                    retail_price = safe_float(row.get('RetailPrice', 0))
+                    item_unit_in_stock = safe_float(row.get('UnitsInStock', 0))
+                    tax_percent = safe_float(row.get('TaxPercent', 0))
+                    unit_cost = safe_float(row.get('UnitCost', 0))
+                    avg_cost = safe_float(row.get('AvgCost', 0))
+                    
+                    # ตรวจสอบค่าที่จำเป็น
+                    if item_id == 0:
+                        error_count += 1
+                        error_details.append(f"แถวที่ {idx}: ไม่พบ ItemId")
+                        continue
+                    
+                    if qty_received <= 0:
+                        error_count += 1
+                        error_details.append(f"แถวที่ {idx}: จำนวนรับต้องมากกว่า 0")
+                        continue
+                    
+                    # คำนวณส่วนลด
+                    dc_percent1 = safe_float(row.get('DCPercent1', 0))
+                    dc_percent2 = safe_float(row.get('DCPercent2', 0))
+                    dc_percent3 = safe_float(row.get('DCPercent3', 0))
                     
                     # คำนวณยอดรวมและส่วนลด
                     subtotal = unit_cost * qty_received
@@ -494,47 +520,76 @@ class ExcelManagerDatabase:
                     tax_amount = total_cost * (tax_percent / 100)
                     
                     # ข้อมูลอื่นๆ
-                    multiply = float(row.get('ItemUnitId2Multiply', 1))
-                    unit_name = row.get('UnitName', '')
-                    tax_id = row.get('TaxId', 1)
-                    item_desc = row.get('ItemDesc', '')
+                    multiply = safe_float(row.get('ItemUnitId2Multiply', 1), default=1.0)
+                    unit_name = str(row.get('UnitName', ''))[:50]  # จำกัดความยาว
+                    tax_id = safe_int(row.get('TaxId', 1), default=1)
+                    item_desc = str(row.get('ItemDesc', ''))[:255]  # จำกัดความยาว
+                    remarks = str(row.get('Remarks', ''))[:255]
                     
-                    # Insert - ใช้ UnitCost จาก Excel ทั้งหมด
-                    self.cursor.execute(
-                        insert_query,
-                        receive_id,              # ReceiveId
-                        item_id,                 # ItemId
-                        qty_received,            # QtyReceived
-                        unit_cost,               # UnitCost (จาก Excel)
-                        unit_cost,               # AveCost (ใช้ UnitCost)
-                        retail_price,            # RetailPrice (จาก database)
-                        qty_received,            # UnitsInStock
-                        datetime.now(),          # InsertDate
-                        0,                       # PurchaserOrderItemId
-                        total_cost,              # TotalCost
-                        multiply,                # Multiply
-                        unit_name,               # UnitName
-                        tax_id,                  # TaxId
-                        tax_amount,              # Tax
-                        tax_percent,             # TaxPercent
-                        unit_cost,               # InitCost (ใช้ UnitCost)
-                        total_cost,              # TotalInitCost (ใช้ TotalCost)
-                        dc_percent1,             # DCPercent1
-                        dc_amount1,              # DCAmount1
-                        dc_percent2,             # DCPercent2
-                        dc_amount2,              # DCAmount2
-                        dc_percent3,             # DCPercent3
-                        dc_amount3,              # DCAmount3
-                        total_discount,          # TotalDiscount
-                        qty_received,            # OrderQty
-                        row.get('ExpireDate'),   # ExpireDate
-                        qty_received,            # RemainQty
-                        qty_received,            # LotBalanceQty
-                        item_desc,               # ItemDesc
-                        idx,                     # LineNum
-                        row.get('Remarks', ''),  # Remarks
-                        row.get('ManufacturingDate')  # ManufacturingDate
-                    )
+                    # จัดการวันที่
+                    expire_date = row.get('ExpireDate')
+                    manufacturing_date = row.get('ManufacturingDate')
+                    
+                    # ตรวจสอบว่าเป็น None หรือไม่
+                    if expire_date == '' or expire_date == 'None':
+                        expire_date = None
+                    if manufacturing_date == '' or manufacturing_date == 'None':
+                        manufacturing_date = None
+                        
+                    params = [
+                        receive_id, item_id, qty_received*multiply, unit_cost/multiply, avg_cost, retail_price,
+                        item_unit_in_stock, datetime.now(), 0, total_cost,
+                        multiply, unit_name, tax_id, tax_amount, tax_percent, unit_cost/multiply,
+                        total_cost, dc_percent1, dc_amount1, dc_percent2, dc_amount2,
+                        dc_percent3, dc_amount3, total_discount, 0, expire_date,
+                        0, None, item_desc, 0, remarks,
+                        manufacturing_date
+                    ]
+
+                    print(f"=== Debug แถวที่ {idx} ===")
+                    print(f"จำนวน parameters: {len(params)}")
+                    print(f"Parameters:")
+                    for i, p in enumerate(params, 1):
+                        print(f"  {i}. {type(p).__name__}: {p}")
+                    print("=" * 50)
+
+                    self.cursor.execute(insert_query, *params)  # ใช้ *params แทน
+                    # Insert
+                    # self.cursor.execute(
+                    #     insert_query,
+                    #     receive_id,              # ReceiveId
+                    #     item_id,                 # ItemId
+                    #     qty_received,            # QtyReceived
+                    #     unit_cost,               # UnitCost
+                    #     avg_cost,                # AveCost
+                    #     retail_price,            # RetailPrice
+                    #     item_unit_in_stock,      # UnitsInStock
+                    #     datetime.now(),          # InsertDate
+                    #     0,                       # PurchaserOrderItemId
+                    #     total_cost,              # TotalCost
+                    #     multiply,                # Multiply
+                    #     unit_name,               # UnitName
+                    #     tax_id,                  # TaxId
+                    #     tax_amount,              # Tax
+                    #     tax_percent,             # TaxPercent
+                    #     unit_cost,               # InitCost
+                    #     total_cost,              # TotalInitCost
+                    #     dc_percent1,             # DCPercent1
+                    #     dc_amount1,              # DCAmount1
+                    #     dc_percent2,             # DCPercent2
+                    #     dc_amount2,              # DCAmount2
+                    #     dc_percent3,             # DCPercent3
+                    #     dc_amount3,              # DCAmount3
+                    #     total_discount,          # TotalDiscount
+                    #     0,                       # OrderQty
+                    #     expire_date,             # ExpireDate
+                    #     item_unit_in_stock,            # RemainQty
+                    #     'NULL',                      # LotBalanceQty
+                    #     item_desc,               # ItemDesc
+                    #     idx,                     # LineNum
+                    #     remarks,                 # Remarks
+                    #     manufacturing_date       # ManufacturingDate
+                    # )
                     
                     success_count += 1
                     
@@ -574,41 +629,7 @@ class ExcelManagerDatabase:
             self.connection.rollback()
             self.connection.autocommit = True
             return False, f"Import failed: {str(e)}", {}
-    
-    def log_import_activity(self, username: str, success_count: int, 
-                           error_count: int, file_path: str) -> bool:
-        """บันทึก log การ import (Optional - ถ้าไม่มีตาราง ImportLogs ก็ไม่เป็นไร)"""
-        try:
-            # แปลง username เป็น UserId
-            user_id = self.get_user_id_by_username(username)
             
-            if not user_id:
-                print(f"ไม่พบผู้ใช้ '{username}' สำหรับ log import")
-                return False
-            
-            query = """
-                INSERT INTO ImportLogs 
-                (UserID, ImportDate, SuccessCount, ErrorCount, FilePath)
-                VALUES (?, ?, ?, ?, ?)
-            """
-            
-            self.cursor.execute(
-                query,
-                user_id,            # UserId (จากตาราง Users)
-                datetime.now(),
-                success_count,
-                error_count,
-                file_path
-            )
-            
-            self.connection.commit()
-            return True
-            
-        except Exception as e:
-            # ถ้าไม่มีตาราง ImportLogs ก็ไม่เป็นไร
-            print(f"ไม่สามารถ log import ได้ (อาจยังไม่มีตาราง ImportLogs): {str(e)}")
-            return False
-    
     def close_connection(self):
         """ปิดการเชื่อมต่อฐานข้อมูล"""
         try:
