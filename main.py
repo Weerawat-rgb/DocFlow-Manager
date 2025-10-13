@@ -25,7 +25,7 @@ class UltraModernUI:
         self.show_login()
         
     def setup_window(self):
-        self.root.title("โปรแกรมออกใบวางบิล v1.1")
+        self.root.title("โปรแกรมออกใบวางบิล v1.2")
         self.root.geometry("1200x800")
         self.root.configure(bg='#0a0e27')
         # self.root.state('zoomed')

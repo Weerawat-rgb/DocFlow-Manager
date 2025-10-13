@@ -31,7 +31,10 @@ class BillingNoteGenerator:
     
     def load_config(self):
         """โหลด config.json"""
-        config_path = r'D:\_project\DocFlow-Manager\config.json'
+        # ใช้ relative path
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(current_dir, 'config.json')
+        
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
@@ -49,7 +52,7 @@ class BillingNoteGenerator:
                 "sales_template": "ใบวางบิลขายสำหรับลูกค้า",
                 "branch_template": "ใบวางบิลสาขา"
             }}
-    
+                
     def get_document_title(self, template_type=None):
         """ดึงชื่อเอกสารจาก config.json"""
         if template_type is None:
@@ -212,22 +215,34 @@ class BillingNoteGenerator:
         else:  # default = sales
             template_filename = 'billing_note_template.html'
         
-        template_path = rf'D:\_project\DocFlow-Manager\templates\{template_filename}'
+        # ใช้ relative path จากไฟล์ปัจจุบัน
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        template_path = os.path.join(current_dir, 'templates', template_filename)
         
-        print(f"Loading template: {template_path}")  # Debug
+        print(f"🔍 Loading template: {template_path}")  # Debug
         
         try:
+            # ตรวจสอบว่าไฟล์มีอยู่จริง
+            if not os.path.exists(template_path):
+                print(f"❌ ไม่พบไฟล์: {template_path}")
+                print(f"📁 Current directory: {current_dir}")
+                print(f"📁 กรุณาตรวจสอบว่าโฟลเดอร์ templates และไฟล์ {template_filename} มีอยู่")
+                return self.get_default_template()
+            
             with open(template_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-                print(f"Template loaded successfully: {len(content)} chars")
+                print(f"✅ Template loaded successfully: {len(content)} chars")
                 return content
+                
         except FileNotFoundError:
-            print(f"ไม่พบไฟล์ template: {template_path}")
+            print(f"❌ ไม่พบไฟล์ template: {template_path}")
             return self.get_default_template()
         except Exception as e:
-            print(f"เกิดข้อผิดพลาดในการอ่านไฟล์: {str(e)}")
-            return self.get_default_template()
-                    
+            print(f"❌ เกิดข้อผิดพลาดในการอ่านไฟล์: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return self.get_default_template()     
+                       
     def get_default_template(self):
         """Template เริ่มต้นกรณีไม่พบไฟล์"""
         return '''<!DOCTYPE html>
