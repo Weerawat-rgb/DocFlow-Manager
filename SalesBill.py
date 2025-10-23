@@ -16,6 +16,7 @@ class SalesBillUI:
         self.selected_customer = None
         self.selected_invoices = set()  
         self.selected_invoice_numbers = set() 
+        self.discount_amount = 0.0
         
         self.setup_window()
         
@@ -39,7 +40,7 @@ class SalesBillUI:
         self.show_step1()
         
     def setup_window(self):
-        self.window.title("ระบบใบวางบิลขาย - DocFlow Manager")
+        self.window.title("ระบบใบวางบิลขาย")
         self.window.geometry("1400x900")
         self.window.configure(bg='#f8fafc')
         self.center_window()
@@ -603,6 +604,8 @@ class SalesBillUI:
         
         # Load invoices
         self.load_customer_invoices()
+        
+        
                         
     def load_customer_invoices(self):
         try:
@@ -874,7 +877,7 @@ class SalesBillUI:
                 total_amount += float(amount_str)
             except:
                 pass
-        
+            
         # Update labels
         self.selected_count_label.config(text=f"เลือกแล้ว: {selected_count} รายการ")
         self.selected_amount_label.config(text=f"ยอดรวม: {total_amount:,.2f} บาท")
@@ -1078,25 +1081,64 @@ class SalesBillUI:
                     formatted_amount
                 ))
         
-        # Summary section - เหมือน Step 3
-        summary_frame = tk.Frame(card, bg='#fef3c7', padx=15, pady=10, relief='solid', bd=1)
+        # Summary section - ปรับให้มีส่วนลดและยอดสุทธิ
+        summary_frame = tk.Frame(card, bg='white', padx=20, pady=15, relief='solid', bd=1)
         summary_frame.pack(fill='x', pady=(10, 15))
-        
-        # Left side
-        summary_left = tk.Frame(summary_frame, bg='#fef3c7')
-        summary_left.pack(side='left')
-        
-        tk.Label(summary_left, text=f"เลือกแล้ว: {count} รายการ",
-                font=('Segoe UI', 11, 'bold'),
-                fg='#10b981', bg='#fef3c7').pack(side='left')
-        
-        # Right side
-        summary_right = tk.Frame(summary_frame, bg='#fef3c7')
-        summary_right.pack(side='right')
-        
-        tk.Label(summary_right, text=f"ยอดรวม: {total_amount:,.2f} บาท",
-                font=('Segoe UI', 11, 'bold'),
-                fg='#dc2626', bg='#fef3c7').pack(side='right')
+
+        # ยอดรวม
+        total_row = tk.Frame(summary_frame, bg='white')
+        total_row.pack(fill='x', pady=5)
+        tk.Label(total_row, text=f"เลือกแล้ว: {count} รายการ",
+                font=('Segoe UI', 11),
+                fg='#6b7280', bg='white').pack(side='left')
+        self.summary_total = tk.Label(total_row, text=f"ยอดรวม: {total_amount:,.2f} บาท",
+                                    font=('Segoe UI', 11, 'bold'),
+                                    fg='#1f2937', bg='white')
+        self.summary_total.pack(side='right')
+
+        # ส่วนลด
+        discount_row = tk.Frame(summary_frame, bg='white')
+        discount_row.pack(fill='x', pady=5)
+        tk.Label(discount_row, text="ส่วนลดท้ายบิล:",
+                font=('Segoe UI', 11),
+                fg='#6b7280', bg='white').pack(side='left')
+
+        discount_input_frame = tk.Frame(discount_row, bg='white')
+        discount_input_frame.pack(side='right')
+
+        self.discount_var = tk.StringVar(value="0.00")
+        discount_entry = tk.Entry(discount_input_frame, 
+                                textvariable=self.discount_var,
+                                font=('Segoe UI', 11),
+                                width=12,
+                                justify='right',
+                                bg='#f9fafb',
+                                relief='solid',
+                                borderwidth=1)
+        discount_entry.pack(side='left', padx=(0, 5))
+        discount_entry.bind('<KeyRelease>', self.calculate_net_amount)
+
+        tk.Label(discount_input_frame, text="บาท",
+                font=('Segoe UI', 11),
+                fg='#6b7280', bg='white').pack(side='left')
+
+        # เส้นแบ่ง
+        separator = tk.Frame(summary_frame, bg='#e5e7eb', height=1)
+        separator.pack(fill='x', pady=10)
+
+        # ยอดคงเหลือสุทธิ
+        net_row = tk.Frame(summary_frame, bg='#f0fdf4', relief='solid', bd=1)
+        net_row.pack(fill='x', pady=5)
+        net_content = tk.Frame(net_row, bg='#f0fdf4')
+        net_content.pack(fill='x', padx=10, pady=8)
+
+        tk.Label(net_content, text="ยอดคงเหลือสุทธิ:",
+                font=('Segoe UI', 13, 'bold'),
+                fg='#166534', bg='#f0fdf4').pack(side='left')
+        self.summary_net = tk.Label(net_content, text=f"{total_amount:,.2f} บาท",
+                                font=('Segoe UI', 14, 'bold'),
+                                fg='#15803d', bg='#f0fdf4')
+        self.summary_net.pack(side='right')
         
         # Action buttons
         action_frame = tk.Frame(card, bg='white')
@@ -1140,12 +1182,33 @@ class SalesBillUI:
                     self.selected_invoice_numbers.add(invoice_number)
         
         print(f"Saved selected invoices: {self.selected_invoice_numbers}")
+        
+    def calculate_net_amount(self, event=None):
+        """คำนวณยอดคงเหลือหลังหักส่วนลด"""
+        try:
+            total_text = self.summary_total.cget('text').replace('ยอดรวม: ', '').replace(' บาท', '').replace(',', '')
+            total_amount = float(total_text)
+            
+            discount_text = self.discount_var.get().replace(',', '')
+            discount_amount = float(discount_text) if discount_text else 0.0
+            
+            if discount_amount > total_amount:
+                discount_amount = total_amount
+                self.discount_var.set(f"{discount_amount:,.2f}")
+            
+            net_amount = total_amount - discount_amount
+            self.discount_amount = discount_amount
+            
+            self.summary_net.config(text=f"{net_amount:,.2f} บาท")
+            
+        except ValueError:
+            pass
     
     def create_billing_document(self):
         try:
             customer_id = self.selected_customer.get('CustomerId')
             created_by = self.user_data.get('username', 'Unknown')
-            user_id = self.user_data.get('username', 'Unknown')  # เพิ่มบรรทัดนี้
+            user_id = self.user_data.get('username', 'Unknown')  
             
             # ดึงเลขที่ใบแจ้งหนี้จริงจาก selected_invoices
             actual_invoice_numbers = []
@@ -1173,11 +1236,18 @@ class SalesBillUI:
             if not confirm:  # ถ้ากด No ให้หยุดทำงาน
                 return
             
+            # ⭐ ตรวจสอบว่ามี discount_amount หรือไม่
+            if not hasattr(self, 'discount_amount'):
+                self.discount_amount = 0.0
+
+            print(f"🔍 Discount amount ที่จะบันทึก: {self.discount_amount}")  
+
             billing_doc_no = self.db.create_billing_document(
                 customer_id=customer_id,
                 invoice_numbers=actual_invoice_numbers,
                 created_by=created_by,
-                user_id=user_id  
+                user_id=user_id,
+                discount_amount=self.discount_amount  
             )
             
             if billing_doc_no:
@@ -1292,52 +1362,64 @@ class SalesBillUI:
                     
                     order += 1
             
-            # แปลงตัวเลขเป็นภาษาไทย
-            thai_baht_text = self.number_to_thai(total_amount)
-            
-            # เตรียมข้อมูลสำหรับ template
-            template_data = {
-                'DocumentTitle': 'ใบวางบิลขาย',
-                
-                # ⭐ ข้อมูลบริษัท - ระบุชัดเจน
-                'Companyname': company_data.get('Companyname', 'ไม่พบข้อมูล'),
-                'SiteAddress': company_data.get('SiteAddress', 'ไม่พบข้อมูล'),
-                'PhoneNumber': company_data.get('PhoneNumber', 'ไม่พบข้อมูล'),
-                'TaxId': company_data.get('TaxId', 'ไม่พบข้อมูล'),
-                'SitePicture': company_data.get('SitePicture', ''),
-                
-                # ข้อมูลลูกค้า
-                'CustomerName': customer_detail.get('Name', ''),
-                'CustomerAddress': customer_detail.get('full_address', ''),
-                'PhoneMobile': customer_detail.get('PhoneMobile', ''),
-                'CustomerTaxNum': customer_detail.get('CustomerTaxNum', ''),
-                
-                # ข้อมูลเอกสาร
-                'DocNo': billing_doc_no,
-                'DocDate': datetime.now().strftime('%d/%m/%Y'),
-                
-                # ข้อมูลรายการแรก
-                'InvoiceNumber': first_item['docNo'] if first_item else '',
-                'InvoiceDate': first_item['date'] if first_item else '',
-                'MaxDueDate': first_item['credit'] if first_item else '',
-                'DueDate': first_item['dueDate'] if first_item else '',
-                'Total': first_item['total'] if first_item else '0.00',
-                'PaidAmount': '0.00',
-                'UnpaidAmount': first_item['unpaidAmount'] if first_item else '0.00',
-                
-                # ข้อมูลสรุป
-                'TotalUnpaidAmount': f"{total_amount:,.2f}",
-                'TextThaiBaht': thai_baht_text,
-                
-                # รายการเพิ่มเติม
-                'additionalItems': additional_items
-            }
+                # ⭐ ตรวจสอบว่ามี discount_amount หรือไม่
+                if not hasattr(self, 'discount_amount'):
+                    self.discount_amount = 0.0
 
-            # Debug
+                # คำนวณยอดสุทธิ
+                net_amount = total_amount - self.discount_amount
+
+                # แปลงตัวเลขเป็นภาษาไทย (ใช้ยอดสุทธิ)
+                thai_baht_text = self.number_to_thai(net_amount)
+
+                # เตรียมข้อมูลสำหรับ template
+                template_data = {
+                    'DocumentTitle': 'ใบวางบิลขาย',
+                    
+                    # ⭐ ข้อมูลบริษัท - ระบุชัดเจน
+                    'Companyname': company_data.get('Companyname', 'ไม่พบข้อมูล'),
+                    'SiteAddress': company_data.get('SiteAddress', 'ไม่พบข้อมูล'),
+                    'PhoneNumber': company_data.get('PhoneNumber', 'ไม่พบข้อมูล'),
+                    'TaxId': company_data.get('TaxId', 'ไม่พบข้อมูล'),
+                    'SitePicture': company_data.get('SitePicture', ''),
+                    
+                    # ข้อมูลลูกค้า
+                    'CustomerName': customer_detail.get('Name', ''),
+                    'CustomerAddress': customer_detail.get('full_address', ''),
+                    'PhoneMobile': customer_detail.get('PhoneMobile', ''),
+                    'CustomerTaxNum': customer_detail.get('CustomerTaxNum', ''),
+                    
+                    # ข้อมูลเอกสาร
+                    'DocNo': billing_doc_no,
+                    'DocDate': datetime.now().strftime('%d/%m/%Y'),
+                    
+                    # ข้อมูลรายการแรก
+                    'InvoiceNumber': first_item['docNo'] if first_item else '',
+                    'InvoiceDate': first_item['date'] if first_item else '',
+                    'MaxDueDate': first_item['credit'] if first_item else '',
+                    'DueDate': first_item['dueDate'] if first_item else '',
+                    'Total': first_item['total'] if first_item else '0.00',
+                    'PaidAmount': '0.00',
+                    'UnpaidAmount': first_item['unpaidAmount'] if first_item else '0.00',
+                    
+                    # ⭐ ข้อมูลสรุป - เพิ่มส่วนลดและยอดสุทธิ
+                    'TotalUnpaidAmount': f"{total_amount:,.2f}",
+                    'Discount': f"{self.discount_amount:,.2f}",
+                    'NetAmount': f"{net_amount:,.2f}",
+                    'TextThaiBaht': thai_baht_text,  # ⭐ ใช้ค่าที่แปลงจาก net_amount แล้ว
+                    
+                    # รายการเพิ่มเติม
+                    'additionalItems': additional_items
+                }
+            # Debug - ตรวจสอบค่าก่อนส่งไปยัง template
             print("\n🔍 Final template_data:")
             print(f"Companyname: {template_data.get('Companyname')}")
             print(f"SiteAddress: {template_data.get('SiteAddress')}")
             print(f"CustomerName: {template_data.get('CustomerName')}")
+            print(f"TotalUnpaidAmount: {template_data.get('TotalUnpaidAmount')}")
+            print(f"Discount: {template_data.get('Discount')}")  # ⭐ เพิ่ม
+            print(f"NetAmount: {template_data.get('NetAmount')}")  # ⭐ เพิ่ม
+            print(f"TextThaiBaht: {template_data.get('TextThaiBaht')}")  # ⭐ เพิ่ม
             print()
 
             return template_data           

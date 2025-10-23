@@ -291,9 +291,42 @@
 
             <!-- Total Section -->
             <div class="total-section">
-                <div class="thai-baht">{{ TextThaiBaht }}</div>
-                <div class="total-row">
-                    ยอดรวมวางบิล {{ TotalUnpaidAmount }} บาท
+                <table
+                    style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+                    <tr>
+                        <td
+                            style="text-align: right; padding: 5px; font-weight: normal;">
+                            ยอดรวมใบแจ้งหนี้:
+                        </td>
+                        <td
+                            style="text-align: right; padding: 5px; width: 150px; font-weight: bold;">
+                            {{ TotalUnpaidAmount }} บาท
+                        </td>
+                    </tr>
+                    <tr>
+                        <td
+                            style="text-align: right; padding: 5px; font-weight: normal; color: #000000;">
+                            หัก ส่วนลดท้ายบิล:
+                        </td>
+                        <td
+                            style="text-align: right; padding: 5px; font-weight: bold; color: #000000;">
+                            {{ Discount }} บาท
+                        </td>
+                    </tr>
+                    <tr style="border-top: 2px solid #000;">
+                        <td
+                            style="text-align: right; padding: 8px 5px; font-weight: bold; font-size: 14px;">
+                            ยอดคงเหลือสุทธิ:
+                        </td>
+                        <td
+                            style="text-align: right; padding: 8px 5px; font-weight: bold; font-size: 14px; color: #000000;">
+                            {{ NetAmount }} บาท
+                        </td>
+                    </tr>
+                </table>
+                <div class="thai-baht"
+                    style="text-align: right; padding-right: 5px;">
+                    ({{ TextThaiBaht }})
                 </div>
             </div>
 
@@ -302,6 +335,10 @@
                 <div class="signature-box">
                     <div class="signature-line"></div>
                     <div>ผู้วางบิล</div>
+                </div>
+                <div class="signature-box">
+                    <div class="signature-line"></div>
+                    <div>ผู้อนุมัติ</div>
                 </div>
                 <div class="signature-box">
                     <div class="signature-line"></div>

@@ -25,7 +25,7 @@ class UltraModernUI:
         self.show_login()
         
     def setup_window(self):
-        self.root.title("โปรแกรมออกใบวางบิล v1.2")
+        self.root.title("โปรแกรมออกใบวางบิล v1.3")
         self.root.geometry("1200x800")
         self.root.configure(bg='#0a0e27')
         # self.root.state('zoomed')
@@ -114,7 +114,7 @@ class UltraModernUI:
         left_frame = tk.Frame(header_content, bg='#1f2937')
         left_frame.pack(side='left', fill='y')
         
-        tk.Label(left_frame, text="◆ DocFlow Manager", 
+        tk.Label(left_frame, text="ระบบวางบิล", 
                 font=('Segoe UI', 18, 'bold'), 
                 fg='white', bg='#1f2937').pack(anchor='w')
         
@@ -146,11 +146,11 @@ class UltraModernUI:
         title_frame = tk.Frame(main_content, bg='#f8fafc')
         title_frame.pack(fill='x', pady=(0, 30))
         
-        tk.Label(title_frame, text="🚀 เลือกโมดูลการทำงาน", 
+        tk.Label(title_frame, text="เลือกประเภทการวางบิล", 
                 font=('Segoe UI', 20, 'bold'), 
                 fg='#1f2937', bg='#f8fafc').pack(anchor='w')
         
-        tk.Label(title_frame, text="คลิกที่โมดูลที่ต้องการใช้งาน", 
+        tk.Label(title_frame, text="คลิกที่ประเภทเอกสารที่ต้องการใช้งาน", 
                 font=('Segoe UI', 11), 
                 fg='#6b7280', bg='#f8fafc').pack(anchor='w', pady=(5, 0))
         

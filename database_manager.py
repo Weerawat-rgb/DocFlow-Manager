@@ -152,7 +152,7 @@ class TableManager:
         self.db_manager = DatabaseManager()
     
     def check_and_create_tables(self):
-        """ตรวจสอบและสร้างตารางที่จำเป็น"""
+        """ตรวจสอบและสร้างตารางที่จำเป็น + อัพเดทคอลัมน์"""
         try:
             conn = self.db_manager.get_connection()
             cursor = conn.cursor()
@@ -193,6 +193,77 @@ class TableManager:
                     else:
                         results.append(f"❌ {table_name} - สร้างไม่สำเร็จ")
             
+            # ⭐ เพิ่มส่วนตรวจสอบและเพิ่มคอลัมน์ DiscountAmount และ NetTotal
+            results.append("")  # บรรทัดว่าง
+            results.append("🔍 ตรวจสอบคอลัมน์เพิ่มเติม...")
+            
+            # ตรวจสอบว่ามีตาราง BillingDocument หรือไม่
+            cursor.execute("""
+                SELECT COUNT(*) 
+                FROM INFORMATION_SCHEMA.TABLES 
+                WHERE TABLE_NAME = 'BillingDocument'
+            """)
+            
+            if cursor.fetchone()[0] > 0:
+                # ตรวจสอบคอลัมน์ DiscountAmount
+                cursor.execute("""
+                    SELECT COUNT(*) 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = 'BillingDocument' 
+                    AND COLUMN_NAME = 'DiscountAmount'
+                """)
+                has_discount = cursor.fetchone()[0] > 0
+                
+                # ตรวจสอบคอลัมน์ NetTotal
+                cursor.execute("""
+                    SELECT COUNT(*) 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = 'BillingDocument' 
+                    AND COLUMN_NAME = 'NetTotal'
+                """)
+                has_nettotal = cursor.fetchone()[0] > 0
+                
+                # เพิ่มคอลัมน์ถ้ายังไม่มี
+                if not has_discount or not has_nettotal:
+                    try:
+                        if not has_discount and not has_nettotal:
+                            # เพิ่มทั้ง 2 คอลัมน์พร้อมกัน
+                            cursor.execute("""
+                                ALTER TABLE [dbo].[BillingDocument]
+                                ADD [DiscountAmount] DECIMAL(15, 2) NULL DEFAULT 0.00,
+                                    [NetTotal] DECIMAL(15, 2) NULL
+                            """)
+                            results.append("✨ เพิ่มคอลัมน์ DiscountAmount และ NetTotal สำเร็จ")
+                        elif not has_discount:
+                            # เพิ่มเฉพาะ DiscountAmount
+                            cursor.execute("""
+                                ALTER TABLE [dbo].[BillingDocument]
+                                ADD [DiscountAmount] DECIMAL(15, 2) NULL DEFAULT 0.00
+                            """)
+                            results.append("✨ เพิ่มคอลัมน์ DiscountAmount สำเร็จ")
+                        elif not has_nettotal:
+                            # เพิ่มเฉพาะ NetTotal
+                            cursor.execute("""
+                                ALTER TABLE [dbo].[BillingDocument]
+                                ADD [NetTotal] DECIMAL(15, 2) NULL
+                            """)
+                            results.append("✨ เพิ่มคอลัมน์ NetTotal สำเร็จ")
+                        
+                        # อัพเดทข้อมูลเก่า
+                        cursor.execute("""
+                            UPDATE [dbo].[BillingDocument]
+                            SET 
+                                DiscountAmount = ISNULL(DiscountAmount, 0.00),
+                                NetTotal = ISNULL(NetTotal, TotalAmount - ISNULL(DiscountAmount, 0))
+                            WHERE DiscountAmount IS NULL OR NetTotal IS NULL
+                        """)
+                        results.append("📝 อัพเดทข้อมูลเดิมเรียบร้อย")
+                        
+                    except Exception as e:
+                        results.append(f"❌ ไม่สามารถเพิ่มคอลัมน์: {str(e)}")
+                else:
+                    results.append("✅ คอลัมน์ DiscountAmount และ NetTotal - มีอยู่แล้ว")
+            
             conn.commit()
             cursor.close()
             conn.close()
@@ -207,7 +278,7 @@ class TableManager:
                 'success': False,
                 'error': str(e)
             }
-    
+                
     def create_table(self, cursor, table_name):
         """สร้างตารางตามชื่อที่กำหนด"""
         try:

@@ -37,7 +37,7 @@ class PurchaseBillUI:
         self.show_step1()
         
     def setup_window(self):
-        self.window.title("ระบบใบวางบิลซื้อ - DocFlow Manager")
+        self.window.title("ระบบใบวางบิลซื้อ")
         self.window.geometry("1400x900")
         self.window.configure(bg='#f8fafc')
         self.center_window()

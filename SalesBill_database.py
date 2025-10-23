@@ -335,7 +335,7 @@ class SalesBillDatabase:
             return f"DOC{now.strftime('%y%m')}001"
 
     def create_billing_document(self, customer_id: int, invoice_numbers: List[str], 
-                        created_by: str, user_id: str) -> Optional[str]:
+                        created_by: str, user_id: str, discount_amount: float = 0.0) -> Optional[str]:
         """สร้างเอกสารใบวางบิล"""
         try:
             cursor = self.connection.cursor()
@@ -406,17 +406,22 @@ class SalesBillDatabase:
                     print(f"❌ ไม่พบใบแจ้งหนี้: '{invoice_no_str}'")
             
             print(f"💰 ยอดรวมที่คำนวณได้: {total_unpaid_amount}")
+            print(f"💸 ส่วนลด: {discount_amount}")
+            
+            # ⭐ คำนวณยอดสุทธิ
+            net_total = total_unpaid_amount - discount_amount
+            print(f"💵 ยอดสุทธิ: {net_total}")
             
             if not invoice_details:
                 print("❌ ไม่มีข้อมูลใบแจ้งหนี้ที่ถูกต้อง")
                 return None
             
-            # Insert billing document header
+            # Insert billing document header - ⭐ เพิ่ม DiscountAmount และ NetTotal
             insert_header = """
             INSERT INTO BillingDocument 
             (BillingDocNumber, CustomerId, CustomerName, CustomerAddress, CustomerPhone,
-            CreateDate, CreatedBy, TotalAmount, TotalItems, Status, Notes, UserId)
-            VALUES (?, ?, ?, ?, ?, GETDATE(), ?, ?, ?, 'Active', ?, ?)
+            CreateDate, CreatedBy, TotalAmount, DiscountAmount, NetTotal, TotalItems, Status, Notes, UserId)
+            VALUES (?, ?, ?, ?, ?, GETDATE(), ?, ?, ?, ?, ?, 'Active', ?, ?)
             """
             
             customer_name = customer_detail.get('Name', '')
@@ -426,7 +431,8 @@ class SalesBillDatabase:
             
             cursor.execute(insert_header, (
                 billing_doc_no, customer_id, customer_name, customer_address, 
-                customer_phone, created_by, total_unpaid_amount, len(invoice_details), notes, user_id
+                customer_phone, created_by, total_unpaid_amount, discount_amount, net_total,  # ⭐ เพิ่มตรงนี้
+                len(invoice_details), notes, user_id
             ))
             
             # Get billing document ID
@@ -481,6 +487,8 @@ class SalesBillDatabase:
             print(f"   - ลูกค้า: {customer_name}")
             print(f"   - จำนวนรายการ: {len(invoice_details)} รายการ")
             print(f"   - ยอดรวม: {total_unpaid_amount:,.2f} บาท")
+            print(f"   - ส่วนลด: {discount_amount:,.2f} บาท")  # ⭐ เพิ่ม
+            print(f"   - ยอดสุทธิ: {net_total:,.2f} บาท")  # ⭐ เพิ่ม
             print(f"   - อัพเดท Invoice Status = 99: {updated_count} รายการ")
             
             return billing_doc_no
@@ -490,8 +498,8 @@ class SalesBillDatabase:
             print(f"ข้อผิดพลาดในการสร้างเอกสารใบวางบิล: {str(e)}")
             import traceback
             traceback.print_exc()
-            return None        
-                            
+            return None
+                                    
     def close_connection(self):
         """ปิดการเชื่อมต่อฐานข้อมูล"""
         if self.connection:
@@ -564,6 +572,8 @@ class SalesBillDatabase:
                 bd.CreateDate,
                 bd.CustomerName,
                 bd.TotalAmount,
+                COALESCE(bd.DiscountAmount, 0) as DiscountAmount,  
+                COALESCE(bd.NetTotal, bd.TotalAmount) as NetTotal,
                 bd.TotalItems,
                 bd.CreatedBy,
                 CASE 
@@ -588,7 +598,7 @@ class SalesBillDatabase:
         except Exception as e:
             print(f"Error getting billing history: {str(e)}")
             return []
-
+        
     def search_billing_history(self, search_term, date_from, date_to):
         """ค้นหาประวัติใบวางบิล"""
         try:
@@ -600,6 +610,8 @@ class SalesBillDatabase:
                 CreateDate,
                 CustomerName,
                 TotalAmount,
+                COALESCE(DiscountAmount, 0) as DiscountAmount,  
+                COALESCE(NetTotal, TotalAmount) as NetTotal,     
                 TotalItems,
                 CreatedBy,
                 CASE 
@@ -627,7 +639,7 @@ class SalesBillDatabase:
         except Exception as e:
             print(f"Error searching billing history: {str(e)}")
             return []
-                
+                        
     def get_billing_detail(self, billing_doc_number: str) -> Dict:
         """ดึงรายละเอียดใบวางบิล"""
         try:
@@ -643,6 +655,8 @@ class SalesBillDatabase:
                 CreateDate,
                 CreatedBy,
                 TotalAmount,
+                ISNULL(DiscountAmount, 0) as DiscountAmount,  
+                ISNULL(NetTotal, TotalAmount) as NetTotal,     
                 TotalItems,
                 Status,
                 Notes
@@ -662,7 +676,7 @@ class SalesBillDatabase:
         except Exception as e:
             print(f"ข้อผิดพลาดในการดึงรายละเอียด: {str(e)}")
             return {}
-
+        
     def get_billing_items(self, billing_doc_number: str) -> List[Dict]:
         """ดึงรายการใบแจ้งหนี้ในใบวางบิล"""
         try:

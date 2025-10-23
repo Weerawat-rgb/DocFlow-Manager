@@ -35,7 +35,7 @@ class BranchBillUI:
         self.show_step1()
         
     def setup_window(self):
-        self.window.title("ระบบใบวางบิลสาขา - DocFlow Manager")
+        self.window.title("ระบบใบวางบิลสาขา")
         self.window.geometry("1400x900")
         self.window.configure(bg='#f8fafc')
         self.center_window()

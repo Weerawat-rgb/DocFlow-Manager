@@ -171,8 +171,7 @@ class SalesBillHistoryUI:
         style.configure("History.Treeview.Heading", 
                     font=('Segoe UI', 11, 'bold'))
         
-        columns = ('BillingDocNumber', 'CreateDate', 'CustomerName', 'TotalAmount', 'TotalItems', 'CreatedBy',  'Status')
-        
+        columns = ('BillingDocNumber', 'CreateDate', 'CustomerName', 'TotalAmount', 'Discount', 'NetTotal', 'TotalItems', 'CreatedBy', 'Status')        
         self.history_tree = ttk.Treeview(table_frame, columns=columns, show='headings', 
                                         style="History.Treeview")
         
@@ -181,11 +180,13 @@ class SalesBillHistoryUI:
             'BillingDocNumber': {'text': 'เลขที่เอกสาร', 'width': 110, 'anchor': 'center'},
             'CreateDate': {'text': 'วันที่สร้าง', 'width': 95, 'anchor': 'center'},
             'CustomerName': {'text': 'ชื่อลูกค้า', 'width': 150, 'anchor': 'w'},
-            'TotalAmount': {'text': 'ยอดรวม (บาท)', 'width': 100, 'anchor': 'e'},
+            'TotalAmount': {'text': 'ยอดรวม', 'width': 90, 'anchor': 'e'},
+            'Discount': {'text': 'ส่วนลด', 'width': 80, 'anchor': 'e'},  
+            'NetTotal': {'text': 'ยอดสุทธิ', 'width': 90, 'anchor': 'e'},  
             'TotalItems': {'text': 'รายการ', 'width': 70, 'anchor': 'center'},
             'CreatedBy': {'text': 'ผู้สร้าง', 'width': 85, 'anchor': 'center'},
             'Status': {'text': 'สถานะ', 'width': 75, 'anchor': 'center'}
-        }
+        }        
         
         for col in columns:
             self.history_tree.heading(col, text=column_config[col]['text'], anchor='center')
@@ -260,7 +261,7 @@ class SalesBillHistoryUI:
             
             billing_history = self.db.get_billing_history(date_from, date_to)
             
-            for billing in billing_history:
+            for billing in billing_history:  # ⭐ เริ่ม loop
                 # Format date
                 create_date = billing.get('CreateDate', '')
                 if isinstance(create_date, datetime):
@@ -274,32 +275,48 @@ class SalesBillHistoryUI:
                     amount_str = f"{amount:,.2f}"
                 except:
                     amount_str = str(billing.get('TotalAmount', '0'))
-                
+
+                # ⭐ Format discount
+                try:
+                    discount = float(billing.get('DiscountAmount', 0))
+                    discount_str = f"{discount:,.2f}"
+                except:
+                    discount_str = "0.00"
+
+                # ⭐ Format net total
+                try:
+                    net_total = float(billing.get('NetTotal', 0))
+                    net_total_str = f"{net_total:,.2f}"
+                except:
+                    net_total_str = amount_str
+
                 status = billing.get('Status', '')
-                
-                # ⭐ Insert และเก็บ item_id
+
+                # ⭐ Insert (ต้องอยู่ใน loop ด้วย!)
                 item_id = self.history_tree.insert('', 'end', values=(
                     billing.get('BillingDocNumber', ''),
                     create_date_str,
                     billing.get('CustomerName', ''),
                     amount_str,
+                    discount_str,
+                    net_total_str,
                     billing.get('TotalItems', ''),
                     billing.get('CreatedBy', ''),
                     status
                 ))
-                
-                # ⭐ ถ้าสถานะเป็น "ยกเลิกแล้ว" ให้ระบายสีแดง
+
+                # ⭐ ถ้าสถานะเป็น "ยกเลิกแล้ว" ให้ระบายสีแดง (ต้องอยู่ใน loop ด้วย!)
                 if status == 'ยกเลิกแล้ว':
                     self.history_tree.item(item_id, tags=('cancelled',))
             
-            # ⭐ กำหนดสีให้กับ tag (เพิ่มหลัง loop)
+            # ⭐ กำหนดสี tag (วางนอก loop)
             self.history_tree.tag_configure('cancelled', foreground='#ef4444')
             
             self.status_label.config(text=f"โหลดข้อมูล {len(billing_history)} รายการ")
             
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถโหลดประวัติได้: {str(e)}")
-        
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถโหลดประวัติได้: {str(e)}")        
+            
     def search_history(self, event=None):
         """ค้นหาประวัติ"""
         search_term = self.search_entry.get().strip()
@@ -321,32 +338,47 @@ class SalesBillHistoryUI:
                 else:
                     create_date_str = str(create_date)[:10] if create_date else ''
                 
-                try:
-                    amount = float(billing.get('TotalAmount', 0))
-                    amount_str = f"{amount:,.2f}"
-                except:
-                    amount_str = str(billing.get('TotalAmount', '0'))
-                
-                status = billing.get('Status', '')
-                
-                # ⭐ Insert และเก็บ item_id
-                item_id = self.history_tree.insert('', 'end', values=(
-                    billing.get('BillingDocNumber', ''),
-                    create_date_str,
-                    billing.get('CustomerName', ''),
-                    amount_str,
-                    billing.get('TotalItems', ''),
-                    billing.get('CreatedBy', ''),
-                    status
-                ))
-                
-                # ⭐ ถ้าสถานะเป็น "ยกเลิกแล้ว" ให้ระบายสีแดง
-                if status == 'ยกเลิกแล้ว':
-                    self.history_tree.item(item_id, tags=('cancelled',))
-            
+            try:
+                amount = float(billing.get('TotalAmount', 0))
+                amount_str = f"{amount:,.2f}"
+            except:
+                amount_str = str(billing.get('TotalAmount', '0'))
+
+            # ⭐ Format discount
+            try:
+                discount = float(billing.get('DiscountAmount', 0))
+                discount_str = f"{discount:,.2f}"
+            except:
+                discount_str = "0.00"
+
+            # ⭐ Format net total
+            try:
+                net_total = float(billing.get('NetTotal', 0))
+                net_total_str = f"{net_total:,.2f}"
+            except:
+                net_total_str = amount_str
+
+            status = billing.get('Status', '')
+
+            # ⭐ Insert และเก็บ item_id
+            item_id = self.history_tree.insert('', 'end', values=(
+                billing.get('BillingDocNumber', ''),
+                create_date_str,
+                billing.get('CustomerName', ''),
+                amount_str,
+                discount_str,      # ⭐ เพิ่ม
+                net_total_str,     # ⭐ เพิ่ม
+                billing.get('TotalItems', ''),
+                billing.get('CreatedBy', ''),
+                status
+            ))
+
+            # ⭐ ถ้าสถานะเป็น "ยกเลิกแล้ว" ให้ระบายสีแดง
+            if status == 'ยกเลิกแล้ว':
+                self.history_tree.item(item_id, tags=('cancelled',))
+
             # ⭐ กำหนดสีให้กับ tag
-            self.history_tree.tag_configure('cancelled', foreground='#ef4444')
-            
+            self.history_tree.tag_configure('cancelled', foreground='#ef4444')            
             self.status_label.config(text=f"พบข้อมูล {len(billing_history)} รายการ")
             
         except Exception as e:
@@ -586,9 +618,13 @@ class SalesBillHistoryUI:
             except:
                 pass
         
-        # แปลงตัวเลขเป็นภาษาไทย (ถ้ามี function)
-        thai_baht_text = self.number_to_thai(total_amount)
-        
+        # ⭐ ดึงข้อมูล Discount และ NetTotal จาก database
+        discount_amount = float(billing_detail.get('DiscountAmount', 0))
+        net_total = float(billing_detail.get('NetTotal', total_amount))
+
+        # แปลงตัวเลขเป็นภาษาไทย (ใช้ยอดสุทธิ)
+        thai_baht_text = self.number_to_thai(net_total)
+
         # สร้างข้อมูลสำหรับ template
         template_data = {
             'DocumentTitle': 'ใบวางบิลขาย',
@@ -619,15 +655,24 @@ class SalesBillHistoryUI:
             'PaidAmount': '0.00',
             'UnpaidAmount': first_item['unpaidAmount'] if first_item else '0.00',
             
-            # ข้อมูลสรุป
+            # ⭐ ข้อมูลสรุป - เพิ่ม Discount และ NetAmount
             'TotalUnpaidAmount': f"{total_amount:,.2f}",
-            'TextThaiBaht': thai_baht_text,
+            'Discount': f"{discount_amount:,.2f}",          # ⭐ เพิ่ม
+            'NetAmount': f"{net_total:,.2f}",               # ⭐ เพิ่ม
+            'TextThaiBaht': thai_baht_text,                 # ⭐ แปลงจาก net_total
             
             # รายการเพิ่มเติม
             'additionalItems': additional_items
         }
-        
-        return template_data
+
+        # ⭐ Debug
+        print("\n🔍 Reprint Template Data:")
+        print(f"TotalUnpaidAmount: {template_data.get('TotalUnpaidAmount')}")
+        print(f"Discount: {template_data.get('Discount')}")
+        print(f"NetAmount: {template_data.get('NetAmount')}")
+        print(f"TextThaiBaht: {template_data.get('TextThaiBaht')}\n")
+
+        return template_data        
 
     def number_to_thai(self, amount):
         """แปลงตัวเลขเป็นตัวหนังสือภาษาไทย"""
