@@ -942,7 +942,7 @@ class BranchBillUI:
                 traceback.print_exc()
                         
     def prepare_template_data(self, billing_doc_no, branch_name, withdrawal_numbers):
-        """เตรียมข้อมูลสำหรับ template"""
+        """เตรียมข้อมูลสำหรับ template - ดึงจากฐานข้อมูลโดยตรง"""
         try:
             branch_detail = self.db.get_branch_detail(branch_name)
             
@@ -958,45 +958,45 @@ class BranchBillUI:
                     'SitePicture': ''
                 }
             
+            # ✅ แก้ไข: ดึงข้อมูลจากฐานข้อมูลโดยตรงแทนการใช้ self.selected_withdrawals
+            billing_items = self.db.get_billing_items(billing_doc_no)
+            
             total_amount = 0.0
             first_item = None
             additional_items = []
             
             order = 1
-            for item_id in self.selected_withdrawals:
-                if item_id in self.withdrawal_items:
-                    withdrawal = self.withdrawal_items[item_id]
-                    
-                    withdrawal_date = withdrawal.get('WithdrawalDate', '')[:10] if len(withdrawal.get('WithdrawalDate', '')) > 10 else withdrawal.get('WithdrawalDate', '')
-                    if withdrawal_date:
-                        try:
-                            date_obj = datetime.strptime(withdrawal_date, '%Y-%m-%d')
-                            withdrawal_date = date_obj.strftime('%d/%m/%Y')
-                        except:
-                            pass
-                    
+            for item in billing_items:
+                withdrawal_date = str(item.get('WithdrawalDate', ''))[:10] if item.get('WithdrawalDate') else ''
+                if withdrawal_date:
                     try:
-                        amount = float(str(withdrawal.get('Total', '0')).replace(',', ''))
-                        total_amount += amount
-                        formatted_amount = f"{amount:,.2f}"
+                        date_obj = datetime.strptime(withdrawal_date, '%Y-%m-%d')
+                        withdrawal_date = date_obj.strftime('%d/%m/%Y')
                     except:
-                        amount = 0.0
-                        formatted_amount = "0.00"
-                    
-                    item_data = {
-                        'order': order,
-                        'type': 'ใบเบิกโอน',
-                        'withdrawalNo': withdrawal.get('WithdrawalNumber', ''),
-                        'date': withdrawal_date,
-                        'total': formatted_amount
-                    }
-                    
-                    if order == 1:
-                        first_item = item_data
-                    else:
-                        additional_items.append(item_data)
-                    
-                    order += 1
+                        pass
+                
+                try:
+                    amount = float(str(item.get('TotalAmount', '0')).replace(',', ''))
+                    total_amount += amount
+                    formatted_amount = f"{amount:,.2f}"
+                except:
+                    amount = 0.0
+                    formatted_amount = "0.00"
+                
+                item_data = {
+                    'order': order,
+                    'type': 'ใบเบิกโอน',
+                    'withdrawalNo': item.get('WithdrawalNumber', ''),
+                    'date': withdrawal_date,
+                    'total': formatted_amount
+                }
+                
+                if order == 1:
+                    first_item = item_data
+                else:
+                    additional_items.append(item_data)
+                
+                order += 1
             
             thai_baht_text = self.number_to_thai(total_amount)
             

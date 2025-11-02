@@ -46,7 +46,7 @@ class BranchBillDatabase:
                 SELECT 
                     w.TransferToBranchName as BranchName,
                     COUNT(DISTINCT w.WithdrawalNumber) as WithdrawalCount,
-                    SUM(wi.UnitCost) as TotalAmount
+                    SUM(wi.TotalCost) as TotalAmount
                 FROM Withdrawal w
                 INNER JOIN WithdrawalItem wi ON wi.WithdrawalId = w.WithdrawalId
                 WHERE w.WithdrawalTypeId = 1 
@@ -64,7 +64,7 @@ class BranchBillDatabase:
                 SELECT 
                     w.TransferToBranchName as BranchName,
                     COUNT(DISTINCT w.WithdrawalNumber) as WithdrawalCount,
-                    SUM(wi.UnitCost) as TotalAmount
+                    SUM(wi.TotalCost) as TotalAmount
                 FROM Withdrawal w
                 INNER JOIN WithdrawalItem wi ON wi.WithdrawalId = w.WithdrawalId
                 WHERE w.WithdrawalTypeId = 1 
@@ -97,7 +97,7 @@ class BranchBillDatabase:
             SELECT 
                 w.WithdrawalNumber,
                 w.WithdrawalDate,
-                SUM(wi.UnitCost) as TotalAmount
+                SUM(wi.TotalCost) as TotalAmount
             FROM Withdrawal w
             INNER JOIN WithdrawalItem wi ON wi.WithdrawalId = w.WithdrawalId
             WHERE w.WithdrawalTypeId = 1 
@@ -215,7 +215,7 @@ class BranchBillDatabase:
                     SELECT 
                         w.WithdrawalNumber,
                         w.WithdrawalDate,
-                        SUM(wi.UnitCost) as TotalAmount
+                        SUM(wi.TotalCost) as TotalAmount
                     FROM Withdrawal w
                     INNER JOIN WithdrawalItem wi ON wi.WithdrawalId = w.WithdrawalId
                     WHERE w.WithdrawalNumber = ?
@@ -296,6 +296,8 @@ class BranchBillDatabase:
                     updated_count += 1
             
             self.connection.commit()
+            self.cursor.close()  # ปิด cursor เดิม
+            self.cursor = self.connection.cursor()  # สร้างใหม่
             
             print(f"สร้างเอกสารใบวางบิลสาขา {billing_doc_no} สำเร็จ")
             print(f"   - สาขา: {branch_name}")
