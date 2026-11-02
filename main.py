@@ -5,10 +5,12 @@ import os
 from login import AuthService
 from login import LoginWindow
 
+import theme
+
 # Import modules
 try:
     from PurchaseBill import PurchaseBillUI
-    from SalesBill import SalesBillUI  
+    from SalesBill import SalesBillUI
     from BranchBill import BranchBillUI
     from excel_manager_ui import ExcelManagerUI
     from config import ConfigUI
@@ -25,7 +27,7 @@ class UltraModernUI:
         self.show_login()
         
     def setup_window(self):
-        self.root.title("โปรแกรมออกใบวางบิล v1.4")
+        self.root.title("โปรแกรมออกใบวางบิล v1.5")
         self.root.geometry("1200x800")
         self.root.configure(bg='#0a0e27')
         # self.root.state('zoomed')
@@ -70,7 +72,8 @@ class UltraModernUI:
         password = self.password_entry.get().strip()
         
         if not username or not password:
-            messagebox.showwarning("คำเตือน", "กรุณากรอกข้อมูลให้ครบถ้วน")
+            messagebox.showwarning("คำเตือน", "กรุณากรอกข้อมูลให้ครบถ้วน",
+                parent=self.root)
             return
         
         # ตรวจสอบกับฐานข้อมูลผ่าน AuthService
@@ -81,193 +84,244 @@ class UltraModernUI:
             # ลบบรรทัดนี้ออก: messagebox.showinfo("สำเร็จ", f"ยินดีต้อนรับ {username}")
             self.show_dashboard()
         else:
-            messagebox.showerror("ข้อผิดพลาด", "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")    
+            messagebox.showerror("ข้อผิดพลาด", "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
+                parent=self.root)    
                                 
     def show_message(self, message, msg_type="info"):
         if msg_type == "error":
-            messagebox.showerror("ข้อผิดพลาด", message)
+            messagebox.showerror("ข้อผิดพลาด", message,
+                parent=self.root)
         elif msg_type == "warning":
-            messagebox.showwarning("คำเตือน", message)
+            messagebox.showwarning("คำเตือน", message,
+                parent=self.root)
         else:
-            messagebox.showinfo("ข้อมูล", message)
+            messagebox.showinfo("ข้อมูล", message,
+                parent=self.root)
             
     def show_config(self):
         try:
             from config import ConfigUI
             ConfigUI(self.root)
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถเปิดหน้า Config ได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถเปิดหน้า Config ได้: {str(e)}",
+                parent=self.root)
             print(f"Config error: {e}")
     
     def show_dashboard(self):
         self.clear_window()
-        
-        # Modern header
-        header = tk.Frame(self.root, bg='#1f2937', height=80)
-        header.pack(fill='x')
-        header.pack_propagate(False)
-        
-        header_content = tk.Frame(header, bg='#1f2937')
-        header_content.pack(fill='both', expand=True, padx=30, pady=15)
-        
-        # Left - Brand
-        left_frame = tk.Frame(header_content, bg='#1f2937')
-        left_frame.pack(side='left', fill='y')
-        
-        tk.Label(left_frame, text="ระบบวางบิล", 
-                font=('Segoe UI', 18, 'bold'), 
-                fg='white', bg='#1f2937').pack(anchor='w')
-        
-        tk.Label(left_frame, text="ระบบจัดการเอกสารบัญชี", 
-                font=('Segoe UI', 9), 
-                fg='#d1d5db', bg='#1f2937').pack(anchor='w')
-        
-        # Right - User info
-        right_frame = tk.Frame(header_content, bg='#1f2937')
-        right_frame.pack(side='right', fill='y')
-        
-        tk.Label(right_frame, text=f"👤 {self.current_user['username']}", 
-               font=('Segoe UI', 11), 
-               fg='white', bg='#1f2937').pack(anchor='e')
-        
-        logout_btn = tk.Button(right_frame, text="🚪 ออกจากระบบ",
-                             font=('Segoe UI', 9),
-                             bg='#ef4444', fg='white',
-                             border=0, padx=15, pady=6,
-                             cursor='hand2',
-                             command=self.logout)
-        logout_btn.pack(anchor='e', pady=(5, 0))
-        
-        # Main dashboard
-        main_content = tk.Frame(self.root, bg='#f8fafc')
-        main_content.pack(fill='both', expand=True, padx=30, pady=30)
-        
-        # Title
-        title_frame = tk.Frame(main_content, bg='#f8fafc')
-        title_frame.pack(fill='x', pady=(0, 30))
-        
-        tk.Label(title_frame, text="เลือกประเภทการวางบิล", 
-                font=('Segoe UI', 20, 'bold'), 
-                fg='#1f2937', bg='#f8fafc').pack(anchor='w')
-        
-        tk.Label(title_frame, text="คลิกที่ประเภทเอกสารที่ต้องการใช้งาน", 
-                font=('Segoe UI', 11), 
-                fg='#6b7280', bg='#f8fafc').pack(anchor='w', pady=(5, 0))
-        
-        # Modules grid
-        modules_grid = tk.Frame(main_content, bg='#f8fafc')
-        modules_grid.pack(fill='both', expand=True)
-        
-        # Configure grid
+        theme.configure_styles()
+
+        # ── Header ────────────────────────────────────────────────
+        theme.build_header(
+            self.root,
+            title   = "ระบบวางบิล  DocFlow",
+            subtitle= "ระบบจัดการเอกสารบัญชีครบวงจร",
+            username= self.current_user["username"],
+            accent  = theme.INDIGO,
+        )
+
+        # Right side of header: logout button  (inject into header bar)
+        hdr = self.root.winfo_children()[-2]   # header frame
+        right_extra = tk.Frame(hdr, bg=theme.BG_DARK)
+        right_extra.place(relx=1.0, rely=0.5, anchor="e", x=-theme.SIDE_PAD)
+        logout_btn = tk.Button(
+            right_extra, text="🚪  ออกจากระบบ",
+            font=theme.F_SMALL, bg=theme.RED, fg=theme.TEXT_WHITE,
+            border=0, padx=12, pady=6, cursor="hand2",
+            command=self.logout)
+        logout_btn.pack()
+        theme._hover(logout_btn, theme.RED_H, theme.RED)
+
+        # ── Page content ──────────────────────────────────────────
+        page = tk.Frame(self.root, bg=theme.BG_PAGE)
+        page.pack(fill="both", expand=True)
+
+        # Page title
+        title_frame = tk.Frame(page, bg=theme.BG_PAGE)
+        title_frame.pack(fill="x", padx=theme.SIDE_PAD, pady=(24, 0))
+
+        tk.Label(title_frame, text="เลือกโมดูลการทำงาน",
+                 font=theme.F_H1, fg=theme.TEXT_DARK,
+                 bg=theme.BG_PAGE).pack(anchor="w")
+        tk.Label(title_frame, text="คลิกที่โมดูลด้านล่างเพื่อเริ่มใช้งาน",
+                 font=theme.F_SMALL, fg=theme.TEXT_MUTED,
+                 bg=theme.BG_PAGE).pack(anchor="w", pady=(4, 0))
+
+        theme.divider(title_frame).pack(fill="x", pady=(14, 0))
+
+        # ── Module grid ───────────────────────────────────────────
+        grid_outer = tk.Frame(page, bg=theme.BG_PAGE)
+        grid_outer.pack(fill="both", expand=True,
+                        padx=theme.SIDE_PAD, pady=20)
+
+        for i in range(3):
+            grid_outer.grid_rowconfigure(i, weight=1)
         for i in range(2):
-            modules_grid.grid_rowconfigure(i, weight=1)
-            modules_grid.grid_columnconfigure(i, weight=1)
-        
-        # Create module cards
+            grid_outer.grid_columnconfigure(i, weight=1)
+
         modules_data = [
-            {"row": 0, "col": 0, "title": "📋 ใบวางบิลซื้อ", 
-             "desc": "จัดการใบวางบิลการซื้อสินค้า\nค้นหาผู้จัดจำหน่าย • เลือกบิลรับ • ออกเอกสาร", 
-             "color": "#3b82f6", "hover": "#2563eb", "cmd": self.open_module1},
-            
-            {"row": 0, "col": 1, "title": "🛒 ใบวางบิลขาย", 
-             "desc": "จัดการใบวางบิลการขายสินค้า\nค้นหาลูกค้า • เลือกบิลขาย • ออกเอกสาร", 
-             "color": "#10b981", "hover": "#059669", "cmd": self.open_module2},
-            
-            {"row": 1, "col": 0, "title": "🏪 ใบวางบิลขาย [สาขา]", 
-             "desc": "จัดการใบวางบิลขายระหว่างสาขา\nค้นหาสาขา • เลือกบิลเบิกออก • ออกเอกสาร", 
-             "color": "#f59e0b", "hover": "#d97706", "cmd": self.open_module3},
-            
-            {"row": 1, "col": 1, "title": "📤 Import ใบรับเข้าสินค้า", 
-             "desc": "นำเข้าข้อมูลใบรับจากไฟล์ภายนอก\nรองรับ Excel/CSV • ประมวลผลอัตโนมัติ", 
-             "color": "#8b5cf6", "hover": "#7c3aed", "cmd": self.open_module4}
+            {"row": 0, "col": 0,
+             "title": "📋 ใบวางบิลซื้อ",
+             "desc": "จัดการใบวางบิลการซื้อสินค้า",
+             "tags": "ค้นหาผู้จัดจำหน่าย · เลือกบิลรับ · ออกเอกสาร",
+             "color": theme.BLUE, "hover": theme.BLUE_H,
+             "cmd": self.open_module1},
+
+            {"row": 0, "col": 1,
+             "title": "🛒 ใบวางบิลขาย",
+             "desc": "จัดการใบวางบิลการขายสินค้า",
+             "tags": "ค้นหาลูกค้า · เลือกบิลขาย · ออกเอกสาร",
+             "color": theme.GREEN, "hover": theme.GREEN_H,
+             "cmd": self.open_module2},
+
+            {"row": 1, "col": 0,
+             "title": "🏪 ใบวางบิลขาย [สาขา]",
+             "desc": "จัดการใบวางบิลขายระหว่างสาขา",
+             "tags": "ค้นหาสาขา · เลือกบิลเบิกออก · ออกเอกสาร",
+             "color": theme.AMBER, "hover": theme.AMBER_H,
+             "cmd": self.open_module3},
+
+            {"row": 1, "col": 1,
+             "title": "📤 Import ใบรับเข้าสินค้า",
+             "desc": "นำเข้าข้อมูลใบรับจากไฟล์ภายนอก",
+             "tags": "รองรับ Excel/CSV · ประมวลผลอัตโนมัติ",
+             "color": theme.PURPLE, "hover": theme.PURPLE_H,
+             "cmd": self.open_module4},
         ]
-        
-        for module in modules_data:
-            self.create_module_card(modules_grid, module)
-    
-    def create_module_card(self, parent, module_data):
-        # Card with shadow
-        card_container = tk.Frame(parent, bg='#f8fafc')
-        card_container.grid(row=module_data["row"], column=module_data["col"], 
-                           padx=15, pady=15, sticky='nsew')
-        
-        # Shadow
-        shadow = tk.Frame(card_container, bg='#e5e7eb')
-        shadow.pack(fill='both', expand=True, padx=(4, 0), pady=(4, 0))
-        
-        # Main card
-        card = tk.Frame(card_container, bg='white', cursor='hand2')
-        card.place(x=0, y=0, relwidth=1, relheight=1)
-        
-        # Color accent
-        accent = tk.Frame(card, bg=module_data["color"], height=8)
-        accent.pack(fill='x')
-        
-        # Content
-        content = tk.Frame(card, bg='white', padx=25, pady=25)
-        content.pack(fill='both', expand=True)
-        
-        # Title
-        tk.Label(content, text=module_data["title"],
-               font=('Segoe UI', 15, 'bold'),
-               fg='#1f2937', bg='white').pack(anchor='w', pady=(0, 15))
-        
+
+        edit_sale_data = {
+            "row": 2, "col": 0, "colspan": 2,
+            "title": "✏️ ค้นหา / แก้ไขบิลขาย",
+            "desc": "ดึงหมายเลขบิลขายและแก้ไขรายการสินค้า อัพเดทกลับฐานข้อมูล",
+            "tags": "ค้นหาเลขที่บิล · เลือกบิล · แก้ไขรายการ · บันทึก",
+            "color": theme.GREEN, "hover": theme.GREEN_H,
+            "cmd": self.open_edit_sale_bill,
+        }
+
+        for mod in modules_data:
+            self.create_module_card(grid_outer, mod)
+        self.create_module_card(grid_outer, edit_sale_data)
+
+    def create_module_card(self, parent, data):
+        colspan = data.get("colspan", 1)
+        color   = data["color"]
+        hover   = data["hover"]
+
+        # Container
+        container = tk.Frame(parent, bg=theme.BG_PAGE)
+        container.grid(row=data["row"], column=data["col"],
+                       columnspan=colspan,
+                       padx=10, pady=10, sticky="nsew")
+
+        # Shadow layer
+        shadow = tk.Frame(container, bg=theme.BORDER)
+        shadow.pack(fill="both", expand=True, padx=(3, 0), pady=(3, 0))
+
+        # Card
+        card_frame = tk.Frame(container, bg=theme.BG_CARD, cursor="hand2")
+        card_frame.place(x=0, y=0, relwidth=1, relheight=1)
+
+        # Top accent bar
+        accent_bar = tk.Frame(card_frame, bg=color, height=5)
+        accent_bar.pack(fill="x")
+
+        # Content area
+        content = tk.Frame(card_frame, bg=theme.BG_CARD, padx=24, pady=20)
+        content.pack(fill="both", expand=True)
+
+        # Icon + title row
+        title_row = tk.Frame(content, bg=theme.BG_CARD)
+        title_row.pack(fill="x", anchor="w")
+
+        tk.Label(title_row, text=data["title"],
+                 font=theme.F_H2, fg=theme.TEXT_DARK,
+                 bg=theme.BG_CARD).pack(side="left", anchor="w")
+
+        # Divider
+        tk.Frame(content, bg=theme.BORDER, height=1).pack(
+            fill="x", pady=(10, 8))
+
         # Description
-        tk.Label(content, text=module_data["desc"],
-               font=('Segoe UI', 10),
-               fg='#6b7280', bg='white',
-               justify='left').pack(fill='x', anchor='w')
-        
-        # Action button
-        action_btn = tk.Button(content, text="เข้าใช้งาน →",
-                             font=('Segoe UI', 10, 'bold'),
-                             bg=module_data["color"], fg='white',
-                             border=0, padx=20, pady=10,
-                             cursor='hand2',
-                             command=module_data["cmd"])
-        action_btn.pack(anchor='w', pady=(20, 0))
-        
+        tk.Label(content, text=data["desc"],
+                 font=theme.F_BODY, fg=theme.TEXT_MED,
+                 bg=theme.BG_CARD, anchor="w").pack(anchor="w")
+
+        # Tags row
+        tag_frame = tk.Frame(content, bg=theme.BG_CARD)
+        tag_frame.pack(anchor="w", pady=(6, 0))
+        for tag in data.get("tags", "").split("·"):
+            t = tag.strip()
+            if t:
+                lbl = tk.Label(tag_frame,
+                               text=f"  {t}  ",
+                               font=theme.F_CAPTION,
+                               bg=theme.BG_INPUT,
+                               fg=theme.TEXT_MUTED,
+                               padx=2, pady=2)
+                lbl.pack(side="left", padx=(0, 4))
+
+        # CTA button
+        cta = tk.Button(content, text="เข้าใช้งาน  →",
+                        font=theme.F_SMALL_B,
+                        bg=color, fg=theme.TEXT_WHITE,
+                        border=0, padx=18, pady=8,
+                        cursor="hand2",
+                        command=data["cmd"])
+        cta.pack(anchor="w", pady=(14, 0))
+
         # Hover effects
-        def on_enter(event):
-            accent.config(bg=module_data["hover"])
-            action_btn.config(bg=module_data["hover"])
-            
-        def on_leave(event):
-            accent.config(bg=module_data["color"])
-            action_btn.config(bg=module_data["color"])
-        
-        for widget in [card, content]:
-            widget.bind("<Enter>", on_enter)
-            widget.bind("<Leave>", on_leave)
-            widget.bind("<Button-1>", lambda e: module_data["cmd"]())
-    
+        def on_enter(e):
+            accent_bar.config(bg=hover)
+            cta.config(bg=hover)
+        def on_leave(e):
+            accent_bar.config(bg=color)
+            cta.config(bg=color)
+
+        for w in [card_frame, content, title_row]:
+            w.bind("<Enter>", on_enter)
+            w.bind("<Leave>", on_leave)
+            w.bind("<Button-1>", lambda e, cmd=data["cmd"]: cmd())
+
+
     def open_module1(self):
         try:
             from PurchaseBill import PurchaseBillUI
             PurchaseBillUI(self.root, self.current_user)
         except NameError:
-            messagebox.showinfo("ข้อมูล", "จะเปิด Module 1: ใบวางบิลซื้อ ในสเต๊บต่อไป")
+            messagebox.showinfo("ข้อมูล", "จะเปิด Module 1: ใบวางบิลซื้อ ในสเต๊บต่อไป",
+                parent=self.root)
     
     def open_module2(self):
         try:
             from SalesBill import SalesBillUI
             SalesBillUI(self.root, self.current_user)
         except NameError:
-            messagebox.showinfo("ข้อมูล", "จะเปิด Module 2: ใบวางบิลขาย ในสเต๊บต่อไป")
+            messagebox.showinfo("ข้อมูล", "จะเปิด Module 2: ใบวางบิลขาย ในสเต๊บต่อไป",
+                parent=self.root)
     
     def open_module3(self):
         try:
             from BranchBill import BranchBillUI
             BranchBillUI(self.root, self.current_user)
         except NameError:
-            messagebox.showinfo("ข้อมูล", "จะเปิด Module 3: ใบวางบิลขาย [สาขา] ในสเต๊บต่อไป")
+            messagebox.showinfo("ข้อมูล", "จะเปิด Module 3: ใบวางบิลขาย [สาขา] ในสเต๊บต่อไป",
+                parent=self.root)
     
     def open_module4(self):
         try:
             ExcelManagerUI(self.root, self.current_user)
         except NameError:
-            messagebox.showinfo("ข้อมูล", "จะเปิด Module 4: Import ใบรับเข้าสินค้า ในสเต๊บต่อไป")
-    
+            messagebox.showinfo("ข้อมูล", "จะเปิด Module 4: Import ใบรับเข้าสินค้า ในสเต๊บต่อไป",
+                parent=self.root)
+
+    def open_edit_sale_bill(self):
+        try:
+            from EditSaleBill import EditSaleBillUI
+            EditSaleBillUI(self.root, self.current_user)
+        except Exception as e:
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถเปิดหน้าแก้ไขบิลได้: {str(e)}",
+                parent=self.root)
+
     def logout(self):
         self.current_user = None
         self.show_login()

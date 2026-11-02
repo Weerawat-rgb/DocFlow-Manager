@@ -291,7 +291,8 @@ class BillingNoteGenerator:
         except Exception as e:
             try:
                 import tkinter.messagebox as messagebox
-                messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถแสดงตัวอย่างได้: {str(e)}")
+                messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถแสดงตัวอย่างได้: {str(e)}",
+                    parent=self.window)
             except:
                 print(f"Error: {str(e)}")
     
@@ -307,7 +308,8 @@ class BillingNoteGenerator:
         except Exception as e:
             try:
                 import tkinter.messagebox as messagebox
-                messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถแสดงตัวอย่างได้: {str(e)}")
+                messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถแสดงตัวอย่างได้: {str(e)}",
+                    parent=self.window)
             except:
                 print(f"Error: {str(e)}")
 

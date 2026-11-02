@@ -193,127 +193,137 @@ class BranchBillDatabase:
             return f'BR{timestamp}'
     
     def create_billing_document(self, branch_name: str, withdrawal_numbers: List[str], 
-                            created_by: str) -> Optional[str]:
-        """สร้างเอกสารใบวางบิลสาขา"""
-        try:
-            cursor = self.connection.cursor()
-            
-            billing_doc_no = self.generate_billing_doc_number()
-            branch_detail = self.get_branch_detail(branch_name)
-            
-            print(f"รายการใบเบิกโอนที่ได้รับ: {withdrawal_numbers}")
-            
-            total_amount = 0.0
-            withdrawal_details = []
-            
-            for withdrawal_no in withdrawal_numbers:
-                withdrawal_no_str = str(withdrawal_no).strip()
+                                created_by: str, discount_amount: float = 0.00, 
+                                net_total: Optional[float] = None) -> Optional[str]:
+            """สร้างเอกสารใบวางบิลสาขา"""
+            try:
+                cursor = self.connection.cursor()
                 
-                print(f"กำลังค้นหาใบเบิกโอน: '{withdrawal_no_str}'")
+                billing_doc_no = self.generate_billing_doc_number()
+                branch_detail = self.get_branch_detail(branch_name)
                 
-                cursor.execute("""
-                    SELECT 
-                        w.WithdrawalNumber,
-                        w.WithdrawalDate,
-                        SUM(wi.TotalCost) as TotalAmount
-                    FROM Withdrawal w
-                    INNER JOIN WithdrawalItem wi ON wi.WithdrawalId = w.WithdrawalId
-                    WHERE w.WithdrawalNumber = ?
-                    GROUP BY w.WithdrawalNumber, w.WithdrawalDate
-                """, (withdrawal_no_str,))
+                print(f"รายการใบเบิกโอนที่ได้รับ: {withdrawal_numbers}")
                 
-                result = cursor.fetchone()
-                if result:
-                    print(f"พบข้อมูลใบเบิกโอน: {result[0]}, Total: {result[2]}")
+                total_amount = 0.0
+                withdrawal_details = []
+                
+                for withdrawal_no in withdrawal_numbers:
+                    withdrawal_no_str = str(withdrawal_no).strip()
                     
-                    try:
-                        amount = float(str(result[2]).replace(',', '')) if result[2] else 0.0
-                    except (ValueError, TypeError):
-                        amount = 0.0
+                    print(f"กำลังค้นหาใบเบิกโอน: '{withdrawal_no_str}'")
                     
-                    total_amount += amount
+                    cursor.execute("""
+                        SELECT 
+                            w.WithdrawalNumber,
+                            w.WithdrawalDate,
+                            SUM(wi.TotalCost) as TotalAmount
+                        FROM Withdrawal w
+                        INNER JOIN WithdrawalItem wi ON wi.WithdrawalId = w.WithdrawalId
+                        WHERE w.WithdrawalNumber = ?
+                        GROUP BY w.WithdrawalNumber, w.WithdrawalDate
+                    """, (withdrawal_no_str,))
                     
-                    withdrawal_details.append({
-                        'WithdrawalNumber': result[0],
-                        'WithdrawalDate': result[1],
-                        'Total': amount
-                    })
-                else:
-                    print(f"ไม่พบใบเบิกโอน: '{withdrawal_no_str}'")
-            
-            if not withdrawal_details:
-                print("ไม่มีข้อมูลใบเบิกโอนที่ถูกต้อง")
-                return None
-            
-            # Insert billing document header
-            insert_header = """
-            INSERT INTO BranchBillingDocument 
-            (BillingDocNumber, BranchName, BranchAddress, BranchPhone,
-            CreateDate, CreatedBy, TotalAmount, TotalItems, Status, Notes)
-            VALUES (?, ?, ?, ?, GETDATE(), ?, ?, ?, 'Active', ?)
-            """
-            
-            branch_address = branch_detail.get('full_address', '')
-            branch_phone = branch_detail.get('PhoneMobile', '')
-            notes = f"ใบวางบิลสาขาจำนวน {len(withdrawal_details)} รายการ"
-            
-            cursor.execute(insert_header, (
-                billing_doc_no, branch_name, branch_address, 
-                branch_phone, created_by, total_amount, len(withdrawal_details), notes
-            ))
-            
-            cursor.execute("SELECT @@IDENTITY")
-            billing_doc_id = cursor.fetchone()[0]
-            
-            # Insert billing document items
-            for index, withdrawal_detail in enumerate(withdrawal_details, 1):
-                insert_item = """
-                INSERT INTO BranchBillingDocumentItem 
-                (BranchBillingDocId, WithdrawalNumber, WithdrawalDate, TotalAmount, ItemOrder)
-                VALUES (?, ?, ?, ?, ?)
+                    result = cursor.fetchone()
+                    if result:
+                        print(f"พบข้อมูลใบเบิกโอน: {result[0]}, Total: {result[2]}")
+                        
+                        try:
+                            amount = float(str(result[2]).replace(',', '')) if result[2] else 0.0
+                        except (ValueError, TypeError):
+                            amount = 0.0
+                        
+                        total_amount += amount
+                        
+                        withdrawal_details.append({
+                            'WithdrawalNumber': result[0],
+                            'WithdrawalDate': result[1],
+                            'Total': amount
+                        })
+                    else:
+                        print(f"ไม่พบใบเบิกโอน: '{withdrawal_no_str}'")
+                
+                if not withdrawal_details:
+                    print("ไม่มีข้อมูลใบเบิกโอนที่ถูกต้อง")
+                    return None
+                
+                # คำนวณ net_total ถ้าไม่ได้ส่งมา
+                if net_total is None:
+                    net_total = total_amount - discount_amount
+                
+                # Insert billing document header พร้อม DiscountAmount และ NetTotal
+                insert_header = """
+                INSERT INTO BranchBillingDocument 
+                (BillingDocNumber, BranchName, BranchAddress, BranchPhone,
+                CreateDate, CreatedBy, TotalAmount, DiscountAmount, NetTotal, 
+                TotalItems, Status, Notes)
+                VALUES (?, ?, ?, ?, GETDATE(), ?, ?, ?, ?, ?, 'Active', ?)
                 """
                 
-                cursor.execute(insert_item, (
-                    billing_doc_id,
-                    withdrawal_detail['WithdrawalNumber'],
-                    withdrawal_detail['WithdrawalDate'],
-                    withdrawal_detail['Total'],
-                    index
+                branch_address = branch_detail.get('full_address', '')
+                branch_phone = branch_detail.get('PhoneMobile', '')
+                notes = f"ใบวางบิลสาขาจำนวน {len(withdrawal_details)} รายการ"
+                
+                cursor.execute(insert_header, (
+                    billing_doc_no, branch_name, branch_address, 
+                    branch_phone, created_by, total_amount, 
+                    discount_amount, net_total,  # เพิ่มตรงนี้
+                    len(withdrawal_details), notes
                 ))
-            
-            # Update Withdrawal Description
-            updated_count = 0
-            for withdrawal_detail in withdrawal_details:
-                withdrawal_no_str = str(withdrawal_detail['WithdrawalNumber']).strip()
                 
-                cursor.execute("""
-                    UPDATE Withdrawal 
-                    SET Description = N'วางบิลเรียบร้อยแล้ว' 
-                    WHERE WithdrawalNumber = ? 
-                """, (withdrawal_no_str,))
+                cursor.execute("SELECT @@IDENTITY")
+                billing_doc_id = cursor.fetchone()[0]
                 
-                if cursor.rowcount > 0:
-                    updated_count += 1
-            
-            self.connection.commit()
-            self.cursor.close()  # ปิด cursor เดิม
-            self.cursor = self.connection.cursor()  # สร้างใหม่
-            
-            print(f"สร้างเอกสารใบวางบิลสาขา {billing_doc_no} สำเร็จ")
-            print(f"   - สาขา: {branch_name}")
-            print(f"   - จำนวนรายการ: {len(withdrawal_details)} รายการ")
-            print(f"   - ยอดรวม: {total_amount:,.2f} บาท")
-            print(f"   - อัพเดท Description: {updated_count}/{len(withdrawal_details)} รายการ")
-            
-            return billing_doc_no
-            
-        except Exception as e:
-            self.connection.rollback()
-            print(f"ข้อผิดพลาดในการสร้างเอกสารใบวางบิลสาขา: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return None
-    
+                # Insert billing document items
+                for index, withdrawal_detail in enumerate(withdrawal_details, 1):
+                    insert_item = """
+                    INSERT INTO BranchBillingDocumentItem 
+                    (BranchBillingDocId, WithdrawalNumber, WithdrawalDate, TotalAmount, ItemOrder)
+                    VALUES (?, ?, ?, ?, ?)
+                    """
+                    
+                    cursor.execute(insert_item, (
+                        billing_doc_id,
+                        withdrawal_detail['WithdrawalNumber'],
+                        withdrawal_detail['WithdrawalDate'],
+                        withdrawal_detail['Total'],
+                        index
+                    ))
+                
+                # Update Withdrawal Description
+                updated_count = 0
+                for withdrawal_detail in withdrawal_details:
+                    withdrawal_no_str = str(withdrawal_detail['WithdrawalNumber']).strip()
+                    
+                    cursor.execute("""
+                        UPDATE Withdrawal 
+                        SET Description = N'วางบิลเรียบร้อยแล้ว' 
+                        WHERE WithdrawalNumber = ? 
+                    """, (withdrawal_no_str,))
+                    
+                    if cursor.rowcount > 0:
+                        updated_count += 1
+                
+                self.connection.commit()
+                self.cursor.close()  # ปิด cursor เดิม
+                self.cursor = self.connection.cursor()  # สร้างใหม่
+                
+                print(f"สร้างเอกสารใบวางบิลสาขา {billing_doc_no} สำเร็จ")
+                print(f"   - สาขา: {branch_name}")
+                print(f"   - จำนวนรายการ: {len(withdrawal_details)} รายการ")
+                print(f"   - ยอดรวม: {total_amount:,.2f} บาท")
+                print(f"   - ส่วนลด: {discount_amount:,.2f} บาท")
+                print(f"   - ยอดสุทธิ: {net_total:,.2f} บาท")
+                print(f"   - อัพเดท Description: {updated_count}/{len(withdrawal_details)} รายการ")
+                
+                return billing_doc_no
+                
+            except Exception as e:
+                self.connection.rollback()
+                print(f"ข้อผิดพลาดในการสร้างเอกสารใบวางบิลสาขา: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                return None
+                
     def get_billing_history(self, date_from, date_to):
         """ดึงประวัติใบวางบิล"""
         try:
@@ -324,6 +334,8 @@ class BranchBillDatabase:
                     CreateDate,
                     TotalItems,
                     TotalAmount,
+                    DiscountAmount,
+                    NetTotal,
                     Status,
                     CreatedBy
                 FROM BranchBillingDocument
@@ -337,14 +349,16 @@ class BranchBillDatabase:
             results = []
             for row in rows:
                 results.append({
-                    'BillingDocNumber': row.BillingDocNumber,
-                    'BranchName': row.BranchName,
-                    'CreateDate': row.CreateDate,
-                    'TotalItems': row.TotalItems,
-                    'TotalAmount': float(row.TotalAmount) if row.TotalAmount else 0.0,
-                    'Status': row.Status,
-                    'CreatedBy': row.CreatedBy
-                })
+                'BillingDocNumber': row.BillingDocNumber,
+                'BranchName': row.BranchName,
+                'CreateDate': row.CreateDate,
+                'TotalItems': row.TotalItems,
+                'TotalAmount': float(row.TotalAmount) if row.TotalAmount else 0.0,
+                'DiscountAmount': float(row.DiscountAmount) if row.DiscountAmount else 0.0,  
+                'NetTotal': float(row.NetTotal) if row.NetTotal else 0.0,                      
+                'Status': row.Status,
+                'CreatedBy': row.CreatedBy
+            })
             
             return results
             
@@ -362,6 +376,8 @@ class BranchBillDatabase:
                     CreateDate,
                     TotalItems,
                     TotalAmount,
+                    DiscountAmount,
+                    NetTotal,
                     Status,
                     CreatedBy
                 FROM BranchBillingDocument
@@ -384,6 +400,8 @@ class BranchBillDatabase:
                     'CreateDate': row.CreateDate,
                     'TotalItems': row.TotalItems,
                     'TotalAmount': float(row.TotalAmount) if row.TotalAmount else 0.0,
+                    'DiscountAmount': float(row.DiscountAmount) if row.DiscountAmount else 0.0,  
+                    'NetTotal': float(row.NetTotal) if row.NetTotal else 0.0,                      
                     'Status': row.Status,
                     'CreatedBy': row.CreatedBy
                 })
@@ -414,12 +432,13 @@ class BranchBillDatabase:
                     'BranchPhone': row.BranchPhone,
                     'CreateDate': row.CreateDate,
                     'TotalAmount': float(row.TotalAmount) if row.TotalAmount else 0.0,
+                    'DiscountAmount': float(row.DiscountAmount) if row.DiscountAmount else 0.0,  
+                    'NetTotal': float(row.NetTotal) if row.NetTotal else 0.0,                      
                     'TotalItems': row.TotalItems,
                     'Status': row.Status,
                     'CreatedBy': row.CreatedBy,
                     'Notes': row.Notes
-                }
-            
+                }            
             return None
             
         except Exception as e:

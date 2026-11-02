@@ -90,7 +90,8 @@ class ConfigUI:
                 json.dump(self.config, f, ensure_ascii=False, indent=4)
             return True
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถบันทึกการตั้งค่าได้: {e}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถบันทึกการตั้งค่าได้: {e}",
+                parent=self.window)
             return False
     
     def create_widgets(self):
@@ -295,12 +296,15 @@ class ConfigUI:
             
             if result['success']:
                 result_text = "\n".join(result['results'])
-                messagebox.showinfo("ผลการตรวจสอบ", f"สถานะตาราง:\n\n{result_text}")
+                messagebox.showinfo("ผลการตรวจสอบ", f"สถานะตาราง:\n\n{result_text}",
+                    parent=self.window)
             else:
-                messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด:\n{result['error']}")
+                messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด:\n{result['error']}",
+                    parent=self.window)
                 
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด:\n{str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด:\n{str(e)}",
+                parent=self.window)
         
     def create_simple_field(self, parent, label_text, field_name, default_value="", show=None, height=1, buttons=None):
         # Simple field container
@@ -390,15 +394,18 @@ class ConfigUI:
             database = self.config["database"]["database"]
             
             if not server or not database:
-                messagebox.showwarning("คำเตือน", "กรุณากรอกข้อมูลเซิร์ฟเวอร์และชื่อฐานข้อมูล")
+                messagebox.showwarning("คำเตือน", "กรุณากรอกข้อมูลเซิร์ฟเวอร์และชื่อฐานข้อมูล",
+                    parent=self.window)
                 return
             
             # Simple success message
             messagebox.showinfo("ผลการทดสอบ", 
-                              f"การเชื่อมต่อสำเร็จ!\n\nเซิร์ฟเวอร์: {server}\nฐานข้อมูล: {database}")
+                              f"การเชื่อมต่อสำเร็จ!\n\nเซิร์ฟเวอร์: {server}\nฐานข้อมูล: {database}",
+                parent=self.window)
             
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถเชื่อมต่อได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถเชื่อมต่อได้: {str(e)}",
+                parent=self.window)
     
     def save_settings(self):
         try:
@@ -408,11 +415,13 @@ class ConfigUI:
             
             # Save to file
             if self.save_config():
-                messagebox.showinfo("สำเร็จ", "บันทึกการตั้งค่าเรียบร้อยแล้ว")
+                messagebox.showinfo("สำเร็จ", "บันทึกการตั้งค่าเรียบร้อยแล้ว",
+                    parent=self.window)
                 self.window.destroy()
             
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถบันทึกการตั้งค่าได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถบันทึกการตั้งค่าได้: {str(e)}",
+                parent=self.window)
 
 if __name__ == "__main__":
     app = ConfigUI()

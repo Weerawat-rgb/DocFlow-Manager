@@ -23,24 +23,25 @@ class BranchBillUI:
         try:
             self.db = BranchBillDatabase()
             if not self.db.test_connection():
-                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถเชื่อมต่อฐานข้อมูลได้")
+                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถเชื่อมต่อฐานข้อมูลได้",
+                    parent=self.window)
                 self.window.destroy()
                 return
             
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ข้อผิดพลาดฐานข้อมูล: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ข้อผิดพลาดฐานข้อมูล: {str(e)}",
+                parent=self.window)
             self.window.destroy()
             return
         
         self.show_step1()
         
     def setup_window(self):
-        self.window.title("ระบบใบวางบิลสาขา")
-        self.window.geometry("1400x900")
-        self.window.configure(bg='#f8fafc')
-        self.center_window()
+        import theme
+        self.window.title("🏪 ระบบใบวางบิลขาย [สาขา]")
+        theme.setup_toplevel(self.window, "🏪 ระบบใบวางบิลขาย [สาขา]", 1400, 900)
         self.create_header()
-        
+
     def center_window(self):
         self.window.update_idletasks()
         width = 1400
@@ -50,96 +51,28 @@ class BranchBillUI:
         self.window.geometry(f"{width}x{height}+{x}+{y}")
     
     def create_header(self):
-        header = tk.Frame(self.window, bg='#1f2937', height=80)
-        header.pack(fill='x')
-        header.pack_propagate(False)
-        
-        header_content = tk.Frame(header, bg='#1f2937')
-        header_content.pack(fill='both', expand=True, padx=30, pady=15)
-        
-        # Left - Title
-        left_frame = tk.Frame(header_content, bg='#1f2937')
-        left_frame.pack(side='left', fill='y')
-        
-        tk.Label(left_frame, text="🏢 ระบบใบวางบิลสาขา", 
-                font=('Segoe UI', 18, 'bold'), 
-                fg='white', bg='#1f2937').pack(anchor='w')
-        
-        tk.Label(left_frame, text="จัดการใบวางบิลการโอนสินค้าไปสาขา", 
-                font=('Segoe UI', 9), 
-                fg='#d1d5db', bg='#1f2937').pack(anchor='w')
-        
-        # Right - User info & Close button
-        right_frame = tk.Frame(header_content, bg='#1f2937')
-        right_frame.pack(side='right', fill='y')
-        
-        tk.Label(right_frame, text=f"👤 {self.user_data['username']}", 
-               font=('Segoe UI', 11), 
-               fg='white', bg='#1f2937').pack(anchor='e')
-        
-        close_btn = tk.Button(right_frame, text="✕ ปิดหน้าต่าง",
-                             font=('Segoe UI', 9),
-                             bg='#ef4444', fg='white',
-                             border=0, padx=15, pady=6,
-                             cursor='hand2',
-                             command=self.close_window)
-        close_btn.pack(anchor='e', pady=(5, 0))
-        
+        import theme
+        theme.configure_styles()
+        theme.build_header(
+            self.window,
+            title    = "🏪 ระบบใบวางบิลขาย [สาขา]",
+            subtitle = "จัดการใบวางบิลขายระหว่างสาขา",
+            username = self.user_data["username"],
+            accent   = theme.AMBER,
+            on_close = self.close_window,
+        )
         self.create_step_indicator()
-    
+
     def create_step_indicator(self):
-        # Clear existing step indicator
-        for widget in self.window.winfo_children():
-            if hasattr(widget, '_step_indicator'):
-                widget.destroy()
-        
-        step_frame = tk.Frame(self.window, bg='white', height=60)
-        step_frame.pack(fill='x', padx=30, pady=(20, 0))
-        step_frame.pack_propagate(False)
-        step_frame._step_indicator = True
-        
-        steps_container = tk.Frame(step_frame, bg='white')
-        steps_container.pack(expand=True, pady=15)
-        
-        steps = [
-            {"num": 1, "text": "สร้างเอกสาร"},
-            {"num": 2, "text": "ค้นหาสาขา"},
-            {"num": 3, "text": "เลือกใบเบิกโอน"},
-            {"num": 4, "text": "ตรวจสอบและยืนยัน"}
-        ]
-        
-        for i, step in enumerate(steps):
-            step_item = tk.Frame(steps_container, bg='white')
-            step_item.pack(side='left', padx=20)
-            
-            # Circle
-            if step["num"] <= self.current_step:
-                circle_bg = '#10b981'
-                circle_fg = 'white'
-                text_fg = '#1f2937'
-            else:
-                circle_bg = '#e5e7eb'
-                circle_fg = '#9ca3af'
-                text_fg = '#9ca3af'
-            
-            circle = tk.Frame(step_item, bg=circle_bg, width=35, height=35)
-            circle.pack()
-            circle.pack_propagate(False)
-            
-            tk.Label(circle, text=str(step["num"]), 
-                    font=('Segoe UI', 12, 'bold'),
-                    fg=circle_fg, bg=circle_bg).pack(expand=True)
-            
-            tk.Label(step_item, text=step["text"],
-                    font=('Segoe UI', 9),
-                    fg=text_fg, bg='white').pack(pady=(5, 0))
-            
-            # Arrow
-            if i < len(steps) - 1:
-                tk.Label(steps_container, text="→",
-                        font=('Segoe UI', 16),
-                        fg='#d1d5db', bg='white').pack(side='left', padx=(10, 0))
-                
+        import theme
+        steps = ["สร้างเอกสาร", "ค้นหาสาขา", "เลือกใบเบิก", "ตรวจสอบและยืนยัน"]
+        theme.build_step_indicator(
+            self.window,
+            steps   = steps,
+            current = self.current_step,
+            accent  = theme.AMBER,
+        )
+
     def sync_selected_withdrawals(self):
         """ซิงค์ข้อมูลการเลือกให้เป็นปัจจุบัน"""
         if not hasattr(self, 'selected_withdrawal_numbers'):
@@ -227,7 +160,8 @@ class BranchBillUI:
             from BranchBill_History import BranchBillHistoryUI
             BranchBillHistoryUI(self.window, self.user_data)
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถเปิดหน้าประวัติได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถเปิดหน้าประวัติได้: {str(e)}",
+                parent=self.window)
             print(f"Error opening history: {str(e)}")
                 
     def show_step2(self):
@@ -314,7 +248,8 @@ class BranchBillUI:
             
             self.display_branches(branches)
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถค้นหาสาขาได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถค้นหาสาขาได้: {str(e)}",
+                parent=self.window)
             self.display_branches([])
         
     def select_branch(self, branch):
@@ -485,7 +420,8 @@ class BranchBillUI:
             self.display_withdrawals(withdrawals)
         except Exception as e:
             print(f"Error loading withdrawals: {str(e)}")
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถโหลดใบเบิกโอนได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถโหลดใบเบิกโอนได้: {str(e)}",
+                parent=self.window)
                 
     def display_withdrawals(self, withdrawals):
         # Find the card widget
@@ -814,23 +750,63 @@ class BranchBillUI:
                 ))
         
         # Summary section
-        summary_frame = tk.Frame(card, bg='#fef3c7', padx=15, pady=10, relief='solid', bd=1)
+        summary_frame = tk.Frame(card, bg='white', padx=20, pady=15, relief='solid', bd=1)
         summary_frame.pack(fill='x', pady=(10, 15))
-        
-        summary_left = tk.Frame(summary_frame, bg='#fef3c7')
-        summary_left.pack(side='left')
-        
-        tk.Label(summary_left, text=f"เลือกแล้ว: {count} รายการ",
-                font=('Segoe UI', 11, 'bold'),
-                fg='#10b981', bg='#fef3c7').pack(side='left')
-        
-        summary_right = tk.Frame(summary_frame, bg='#fef3c7')
-        summary_right.pack(side='right')
-        
-        tk.Label(summary_right, text=f"ยอดรวม: {total_amount:,.2f} บาท",
-                font=('Segoe UI', 11, 'bold'),
-                fg='#dc2626', bg='#fef3c7').pack(side='right')
-        
+
+        # ยอดรวม
+        total_row = tk.Frame(summary_frame, bg='white')
+        total_row.pack(fill='x', pady=5)
+        tk.Label(total_row, text=f"เลือกแล้ว: {count} รายการ",
+                font=('Segoe UI', 11),
+                fg='#6b7280', bg='white').pack(side='left')
+        self.summary_total = tk.Label(total_row, text=f"ยอดรวม: {total_amount:,.2f} บาท",
+                                    font=('Segoe UI', 11, 'bold'),
+                                    fg='#1f2937', bg='white')
+        self.summary_total.pack(side='right')
+
+        # ส่วนลด
+        discount_row = tk.Frame(summary_frame, bg='white')
+        discount_row.pack(fill='x', pady=5)
+        tk.Label(discount_row, text="ส่วนลดท้ายบิล:",
+                font=('Segoe UI', 11),
+                fg='#6b7280', bg='white').pack(side='left')
+
+        discount_input_frame = tk.Frame(discount_row, bg='white')
+        discount_input_frame.pack(side='right')
+
+        self.discount_var = tk.StringVar(value="0.00")
+        discount_entry = tk.Entry(discount_input_frame, 
+                                textvariable=self.discount_var,
+                                font=('Segoe UI', 11),
+                                width=12,
+                                justify='right',
+                                bg='#f9fafb',
+                                relief='solid',
+                                borderwidth=1)
+        discount_entry.pack(side='left', padx=(0, 5))
+        discount_entry.bind('<KeyRelease>', self.calculate_net_amount)
+
+        tk.Label(discount_input_frame, text="บาท",
+                font=('Segoe UI', 11),
+                fg='#6b7280', bg='white').pack(side='left')
+
+        # เส้นแบ่ง
+        separator = tk.Frame(summary_frame, bg='#e5e7eb', height=1)
+        separator.pack(fill='x', pady=10)
+
+        # ยอดคงเหลือสุทธิ
+        net_row = tk.Frame(summary_frame, bg='#f0fdf4', relief='solid', bd=1)
+        net_row.pack(fill='x', pady=5)
+        net_content = tk.Frame(net_row, bg='#f0fdf4')
+        net_content.pack(fill='x', padx=10, pady=8)
+
+        tk.Label(net_content, text="ยอดคงเหลือสุทธิ:",
+                font=('Segoe UI', 13, 'bold'),
+                fg='#166534', bg='#f0fdf4').pack(side='left')
+        self.summary_net = tk.Label(net_content, text=f"{total_amount:,.2f} บาท",
+                                font=('Segoe UI', 14, 'bold'),
+                                fg='#15803d', bg='#f0fdf4')
+        self.summary_net.pack(side='right')        
         # Action buttons
         action_frame = tk.Frame(card, bg='white')
         action_frame.pack(fill='x')
@@ -859,70 +835,105 @@ class BranchBillUI:
         except Exception as e:
             print(f"Error getting branch detail: {str(e)}")
             return {}
+        
+    def calculate_net_amount(self, event=None):
+        """คำนวณยอดสุทธิหลังหักส่วนลด"""
+        try:
+            # ดึงยอดรวม
+            total_text = self.summary_total.cget('text')
+            total = float(total_text.replace('ยอดรวม: ', '').replace(' บาท', '').replace(',', ''))
+            
+            # ดึงส่วนลด
+            discount = float(self.discount_var.get().replace(',', '') or '0')
+            
+            # คำนวณยอดสุทธิ
+            net_total = total - discount
+            
+            # อัพเดท label
+            self.summary_net.config(text=f"{net_total:,.2f} บาท")
+            
+        except:
+            pass
     
     def create_billing_document(self):
-        try:
-            branch_name = self.selected_branch.get('BranchName')
-            created_by = self.user_data.get('username', 'Unknown')
-            
-            # ดึงเลขที่ใบเบิกโอนจริงจาก selected_withdrawals
-            actual_withdrawal_numbers = []
-            for item_id in self.selected_withdrawals:
-                if item_id in self.withdrawal_items:
-                    withdrawal_number = self.withdrawal_items[item_id].get('WithdrawalNumber', '')
-                    if withdrawal_number:
-                        actual_withdrawal_numbers.append(str(withdrawal_number))
-            
-            if not actual_withdrawal_numbers:
-                messagebox.showerror("ข้อผิดพลาด", "ไม่พบรายการใบเบิกโอนที่เลือก", parent=self.window)
-                return
-            
-            print(f"Creating billing for Branch: {branch_name}")
-            print(f"Withdrawal numbers: {actual_withdrawal_numbers}")
-            print(f"Created by: {created_by}")
-            
-            #เพิ่มการยืนยันก่อนสร้าง
-            confirm = messagebox.askyesno(
-                "ยืนยันการสร้างเอกสาร",
-                f"ต้องการสร้างใบวางบิลขายสาขาหรือไม่?\n\n"
-                f"ชื่อสาขา: {self.selected_branch.get('BranchName', '')}\n"
-                f"จำนวนรายการ: {len(actual_withdrawal_numbers)} รายการ\n\n"
-                f"กดยืนยันเพื่อดำเนินการต่อ",
-                icon='question',
-                parent=self.window
-            )
-            
-            if not confirm:  # ถ้ากด No ให้หยุดทำงาน
-                return
-
-            
-            billing_doc_no = self.db.create_billing_document(
-                branch_name=branch_name,
-                withdrawal_numbers=actual_withdrawal_numbers,
-                created_by=created_by
-            )
-            
-            if billing_doc_no:
-                response = messagebox.askyesno(
-                    "สำเร็จ", 
-                    f"สร้างใบวางบิลสาขาเรียบร้อยแล้ว\nเลขที่เอกสาร: {billing_doc_no}\n\nคุณต้องการแสดงตัวอย่างใบวางบิลหรือไม่?",
+            try:
+                branch_name = self.selected_branch.get('BranchName')
+                created_by = self.user_data.get('username', 'Unknown')
+                
+                # ดึงค่าส่วนลดและยอดสุทธิ
+                try:
+                    discount_amount = float(self.discount_var.get().replace(',', '') or '0')
+                except:
+                    discount_amount = 0.00
+                
+                try:
+                    net_text = self.summary_net.cget('text')
+                    net_total = float(net_text.replace(' บาท', '').replace(',', ''))
+                except:
+                    net_total = 0.00
+                
+                # ดึงเลขที่ใบเบิกโอนจริงจาก selected_withdrawals
+                actual_withdrawal_numbers = []
+                for item_id in self.selected_withdrawals:
+                    if item_id in self.withdrawal_items:
+                        withdrawal_number = self.withdrawal_items[item_id].get('WithdrawalNumber', '')
+                        if withdrawal_number:
+                            actual_withdrawal_numbers.append(str(withdrawal_number))
+                
+                if not actual_withdrawal_numbers:
+                    messagebox.showerror("ข้อผิดพลาด", "ไม่พบรายการใบเบิกโอนที่เลือก", parent=self.window)
+                    return
+                
+                print(f"Creating billing for Branch: {branch_name}")
+                print(f"Withdrawal numbers: {actual_withdrawal_numbers}")
+                print(f"Created by: {created_by}")
+                print(f"Discount: {discount_amount}, Net Total: {net_total}")
+                
+                # เพิ่มการยืนยันก่อนสร้าง
+                confirm = messagebox.askyesno(
+                    "ยืนยันการสร้างเอกสาร",
+                    f"ต้องการสร้างใบวางบิลขายสาขาหรือไม่?\n\n"
+                    f"ชื่อสาขา: {self.selected_branch.get('BranchName', '')}\n"
+                    f"จำนวนรายการ: {len(actual_withdrawal_numbers)} รายการ\n"
+                    f"ส่วนลด: {discount_amount:,.2f} บาท\n"
+                    f"ยอดสุทธิ: {net_total:,.2f} บาท\n\n"
+                    f"กดยืนยันเพื่อดำเนินการต่อ",
                     icon='question',
                     parent=self.window
                 )
                 
-                if response:
-                    self.show_billing_template(billing_doc_no, branch_name, actual_withdrawal_numbers)
+                if not confirm:
+                    return
                 
-                self.reset_form()
-            else:
-                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถสร้างใบวางบิลสาขาได้", parent=self.window)
+                billing_doc_no = self.db.create_billing_document(
+                    branch_name=branch_name,
+                    withdrawal_numbers=actual_withdrawal_numbers,
+                    created_by=created_by,
+                    discount_amount=discount_amount,
+                    net_total=net_total
+                )
                 
-        except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด: {str(e)}", parent=self.window)
-            print(f"Error in create_billing_document: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            
+                if billing_doc_no:
+                    response = messagebox.askyesno(
+                        "สำเร็จ", 
+                        f"สร้างใบวางบิลสาขาเรียบร้อยแล้ว\nเลขที่เอกสาร: {billing_doc_no}\n\nคุณต้องการแสดงตัวอย่างใบวางบิลหรือไม่?",
+                        icon='question',
+                        parent=self.window
+                    )
+                    
+                    if response:
+                        self.show_billing_template(billing_doc_no, branch_name, actual_withdrawal_numbers)
+                    
+                    self.reset_form()
+                else:
+                    messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถสร้างใบวางบิลสาขาได้", parent=self.window)
+                    
+            except Exception as e:
+                messagebox.showerror("ข้อผิดพลาด", f"เกิดข้อผิดพลาด: {str(e)}", parent=self.window)
+                print(f"Error in create_billing_document: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                            
     def show_billing_template(self, billing_doc_no, branch_name, withdrawal_numbers):
             """แสดงตัวอย่างใบวางบิลด้วยข้อมูลจริง"""
             try:
@@ -934,106 +945,140 @@ class BranchBillUI:
                 generator.preview_in_browser(template_data)
                 
             except ImportError as e:
-                messagebox.showerror("ข้อผิดพลาด", f"ไม่พบ BillingNoteGenerator: {str(e)}")
+                messagebox.showerror("ข้อผิดพลาด", f"ไม่พบ BillingNoteGenerator: {str(e)}",
+                    parent=self.window)
             except Exception as e:
-                messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถแสดงตัวอย่างได้: {str(e)}")
+                messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถแสดงตัวอย่างได้: {str(e)}",
+                    parent=self.window)
                 print(f"Error showing template: {str(e)}")
                 import traceback
                 traceback.print_exc()
                         
     def prepare_template_data(self, billing_doc_no, branch_name, withdrawal_numbers):
-        """เตรียมข้อมูลสำหรับ template - ดึงจากฐานข้อมูลโดยตรง"""
-        try:
-            branch_detail = self.db.get_branch_detail(branch_name)
-            
+            """เตรียมข้อมูลสำหรับ template - ดึงจากฐานข้อมูลโดยตรง"""
             try:
-                from database_manager import get_company_data
-                company_data = get_company_data()
-            except:
-                company_data = {
-                    'Companyname': 'ไม่พบข้อมูลบริษัท',
-                    'SiteAddress': '',
-                    'PhoneNumber': '',
-                    'TaxId': '',
-                    'SitePicture': ''
-                }
-            
-            # ✅ แก้ไข: ดึงข้อมูลจากฐานข้อมูลโดยตรงแทนการใช้ self.selected_withdrawals
-            billing_items = self.db.get_billing_items(billing_doc_no)
-            
-            total_amount = 0.0
-            first_item = None
-            additional_items = []
-            
-            order = 1
-            for item in billing_items:
-                withdrawal_date = str(item.get('WithdrawalDate', ''))[:10] if item.get('WithdrawalDate') else ''
-                if withdrawal_date:
-                    try:
-                        date_obj = datetime.strptime(withdrawal_date, '%Y-%m-%d')
-                        withdrawal_date = date_obj.strftime('%d/%m/%Y')
-                    except:
-                        pass
+                branch_detail = self.db.get_branch_detail(branch_name)
                 
                 try:
-                    amount = float(str(item.get('TotalAmount', '0')).replace(',', ''))
-                    total_amount += amount
-                    formatted_amount = f"{amount:,.2f}"
+                    from database_manager import get_company_data
+                    company_data = get_company_data()
                 except:
-                    amount = 0.0
-                    formatted_amount = "0.00"
+                    company_data = {
+                        'Companyname': 'ไม่พบข้อมูลบริษัท',
+                        'SiteAddress': '',
+                        'PhoneNumber': '',
+                        'TaxId': '',
+                        'SitePicture': ''
+                    }
                 
-                item_data = {
-                    'order': order,
-                    'type': 'ใบเบิกโอน',
-                    'withdrawalNo': item.get('WithdrawalNumber', ''),
-                    'date': withdrawal_date,
-                    'total': formatted_amount
+                # ⭐ ดึงข้อมูล Header (ส่วนลด + ยอดสุทธิ) จากฐานข้อมูล
+                cursor = self.db.connection.cursor()
+                cursor.execute("""
+                    SELECT TotalAmount, DiscountAmount, NetTotal
+                    FROM BranchBillingDocument
+                    WHERE BillingDocNumber = ?
+                """, (billing_doc_no,))
+                
+                header_data = cursor.fetchone()
+                
+                discount_amount = 0.0
+                net_total = 0.0
+                total_from_db = 0.0
+                
+                if header_data:
+                    total_from_db = float(header_data[0] or 0)
+                    discount_amount = float(header_data[1] or 0)
+                    net_total = float(header_data[2] or 0)
+                
+                cursor.close()
+                
+                # ✅ ดึงข้อมูล Items จากฐานข้อมูลโดยตรง
+                billing_items = self.db.get_billing_items(billing_doc_no)
+                
+                total_amount = 0.0
+                first_item = None
+                additional_items = []
+                
+                order = 1
+                for item in billing_items:
+                    withdrawal_date = str(item.get('WithdrawalDate', ''))[:10] if item.get('WithdrawalDate') else ''
+                    if withdrawal_date:
+                        try:
+                            date_obj = datetime.strptime(withdrawal_date, '%Y-%m-%d')
+                            withdrawal_date = date_obj.strftime('%d/%m/%Y')
+                        except:
+                            pass
+                    
+                    try:
+                        amount = float(str(item.get('TotalAmount', '0')).replace(',', ''))
+                        total_amount += amount
+                        formatted_amount = f"{amount:,.2f}"
+                    except:
+                        amount = 0.0
+                        formatted_amount = "0.00"
+                    
+                    item_data = {
+                        'order': order,
+                        'type': 'ใบเบิกโอน',
+                        'withdrawalNo': item.get('WithdrawalNumber', ''),
+                        'date': withdrawal_date,
+                        'total': formatted_amount
+                    }
+                    
+                    if order == 1:
+                        first_item = item_data
+                    else:
+                        additional_items.append(item_data)
+                    
+                    order += 1
+                
+                # ใช้ข้อมูลจาก header ถ้ามี ไม่งั้นใช้ที่คำนวณจาก items
+                if total_from_db > 0:
+                    total_amount = total_from_db
+                
+                # คำนวณ net_total ถ้ายังไม่มีในฐานข้อมูล
+                if net_total == 0:
+                    net_total = total_amount - discount_amount
+                
+                # แปลงยอดสุทธิเป็นภาษาไทย
+                thai_baht_text = self.number_to_thai(net_total)
+                
+                template_data = {
+                    'DocumentTitle': 'ใบวางบิลสาขา',
+                    
+                    'Companyname': company_data.get('Companyname', 'ไม่พบข้อมูล'),
+                    'SiteAddress': company_data.get('SiteAddress', 'ไม่พบข้อมูล'),
+                    'PhoneNumber': company_data.get('PhoneNumber', 'ไม่พบข้อมูล'),
+                    'TaxId': company_data.get('TaxId', 'ไม่พบข้อมูล'),
+                    'SitePicture': company_data.get('SitePicture', ''),
+                    
+                    'BranchName': branch_detail.get('Name', ''),
+                    'BranchAddress': branch_detail.get('full_address', ''),
+                    'PhoneMobile': branch_detail.get('PhoneMobile', ''),
+                    
+                    'DocNo': billing_doc_no,
+                    'DocDate': datetime.now().strftime('%d/%m/%Y'),
+                    
+                    'WithdrawalNumber': first_item['withdrawalNo'] if first_item else '',
+                    'WithdrawalDate': first_item['date'] if first_item else '',
+                    'Total': first_item['total'] if first_item else '0.00',
+                    
+                    'TotalAmount': f"{total_amount:,.2f}",
+                    'Discount': f"{discount_amount:,.2f}",      # ⭐ เพิ่มส่วนลด
+                    'NetAmount': f"{net_total:,.2f}",           # ⭐ เพิ่มยอดสุทธิ
+                    'TextThaiBaht': thai_baht_text,             # ⭐ ใช้ยอดสุทธิแทน
+                    
+                    'additionalItems': additional_items
                 }
-                
-                if order == 1:
-                    first_item = item_data
-                else:
-                    additional_items.append(item_data)
-                
-                order += 1
-            
-            thai_baht_text = self.number_to_thai(total_amount)
-            
-            template_data = {
-                'DocumentTitle': 'ใบวางบิลสาขา',
-                
-                'Companyname': company_data.get('Companyname', 'ไม่พบข้อมูล'),
-                'SiteAddress': company_data.get('SiteAddress', 'ไม่พบข้อมูล'),
-                'PhoneNumber': company_data.get('PhoneNumber', 'ไม่พบข้อมูล'),
-                'TaxId': company_data.get('TaxId', 'ไม่พบข้อมูล'),
-                'SitePicture': company_data.get('SitePicture', ''),
-                
-                'BranchName': branch_detail.get('Name', ''),
-                'BranchAddress': branch_detail.get('full_address', ''),
-                'PhoneMobile': branch_detail.get('PhoneMobile', ''),
-                
-                'DocNo': billing_doc_no,
-                'DocDate': datetime.now().strftime('%d/%m/%Y'),
-                
-                'WithdrawalNumber': first_item['withdrawalNo'] if first_item else '',
-                'WithdrawalDate': first_item['date'] if first_item else '',
-                'Total': first_item['total'] if first_item else '0.00',
-                
-                'TotalAmount': f"{total_amount:,.2f}",
-                'TextThaiBaht': thai_baht_text,
-                
-                'additionalItems': additional_items
-            }
 
-            return template_data
-            
-        except Exception as e:
-            print(f"Error preparing template data: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return {}
-    
+                return template_data
+                
+            except Exception as e:
+                print(f"Error preparing template data: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                return {}
+                
     def number_to_thai(self, amount):
         """แปลงตัวเลขเป็นตัวหนังสือภาษาไทย"""
         try:

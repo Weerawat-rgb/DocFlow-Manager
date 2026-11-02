@@ -176,9 +176,9 @@ class Database:
     
     def get_user_by_username(self, username):
         """ดึงข้อมูลผู้ใช้จากฐานข้อมูล"""
-        query = "SELECT Username, Password FROM users WHERE active = 1 AND Username = ?"
+        query = "SELECT Username, Password, UserId FROM users WHERE active = 1 AND Username = ?"
         results = self.execute_query(query, (username,))
-        
+
         if results and len(results) > 0:
             return results[0]
         return None
@@ -208,20 +208,21 @@ class AuthService:
             if user_data is None:
                 return None
             
-            db_username, encrypted_password = user_data
-            
+            db_username, encrypted_password, user_id = user_data
+
             # ถอดรหัสรหัสผ่านจากฐานข้อมูล
             decrypted_password = self.crypto.decrypt_des(encrypted_password)
-            
+
             if decrypted_password is None:
                 print("ไม่สามารถถอดรหัสรหัสผ่านได้")
                 return None
-            
+
             # เปรียบเทียบรหัสผ่าน
             if decrypted_password == password:
                 return {
                     "username": db_username,
-                    "role": "user"
+                    "user_id":  int(user_id) if user_id else 0,
+                    "role":     "user"
                 }
             else:
                 return None
@@ -256,266 +257,299 @@ class LoginWindow:
     #         print(f"ไม่สามารถโหลด icon ได้: {e}")
 
             
-    def load_logo_from_db(self):
-        """โหลด Logo จากฐานข้อมูล"""
+    def _load_logos(self):
+        """โหลด Logo จาก DB ครั้งเดียว → คืน (photo_small, photo_large)
+        พร้อมเก็บ PIL Image ต้นฉบับใน self._logo_pil สำหรับ dynamic resize"""
+        self._logo_pil = None
         try:
             db = DatabaseManager()
             company_data = db.get_company_data()
-            
-            if company_data and 'SitePicture' in company_data and company_data['SitePicture']:
-                # SitePicture เป็น base64 string แบบ "data:image/jpeg;base64,..."
-                base64_string = company_data['SitePicture']
-                
-                # ตัด prefix "data:image/jpeg;base64," ออก
-                if ',' in base64_string:
-                    base64_string = base64_string.split(',')[1]
-                
-                # แปลง base64 เป็น bytes
-                image_data = base64.b64decode(base64_string)
-                
-                # แปลง bytes เป็น Image
-                image = Image.open(io.BytesIO(image_data))
-                
-                # ปรับขนาด logo
-                image = image.resize((120, 120), Image.Resampling.LANCZOS)
-                
-                # แปลงเป็น PhotoImage
-                photo = ImageTk.PhotoImage(image)
-                return photo
-            
-            return None
-            
+            if not (company_data
+                    and 'SitePicture' in company_data
+                    and company_data['SitePicture']):
+                return None, None
+
+            base64_string = company_data['SitePicture']
+            if ',' in base64_string:
+                base64_string = base64_string.split(',')[1]
+            raw = base64.b64decode(base64_string)
+
+            # เก็บต้นฉบับไว้ resize ทีหลัง
+            self._logo_pil = Image.open(io.BytesIO(raw))
+
+            # ขนาดเล็ก 120×120
+            img_s = self._logo_pil.copy()
+            img_s = img_s.resize((120, 120), Image.Resampling.LANCZOS)
+            photo_small = ImageTk.PhotoImage(img_s)
+
+            # ขนาดกลาง (placeholder ก่อน panel render จริง)
+            img_l = self._logo_pil.copy()
+            img_l.thumbnail((300, 320), Image.Resampling.LANCZOS)
+            photo_large = ImageTk.PhotoImage(img_l)
+
+            return photo_small, photo_large
+
         except Exception as e:
             print(f"ไม่สามารถโหลด Logo ได้: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
+            import traceback; traceback.print_exc()
+            return None, None
+
+    # ── compat aliases (ใช้ใน session เดิม) ───────────────────────
+    def load_logo_from_db(self):
+        small, _ = self._load_logos()
+        return small
+
+    def load_logo_large(self):
+        _, large = self._load_logos()
+        return large
                             
     def clear_window(self):
         """ล้างหน้าจอ"""
         for widget in self.root.winfo_children():
             widget.destroy()
     
+    # ── Design constants ───────────────────────────────────────────
+    _BODY_BG    = "#f1f5f9"   # right panel background
+
     def show(self):
-        """แสดงหน้า Login"""
+        """แสดงหน้า Login – ซ้ายโลโก้เต็ม / ขวาฟอร์ม"""
         self.clear_window()
-        
-        self.logo_image = self.load_logo_from_db()
-        
-        # Soft gradient background
-        main_container = tk.Frame(self.root, bg='#f8fafc')
-        main_container.pack(fill='both', expand=True)
-        
-        # Subtle gradient layers
-        gradient_layers = [
-            {'bg': '#18181b', 'height': 0.5, 'y': 0},
-            {'bg': '#27272a', 'height': 0.3, 'y': 0.3},
-            {'bg': '#3f3f46', 'height': 0.2, 'y': 0.5},
-        ]
-        
-        for layer in gradient_layers:
-            grad_frame = tk.Frame(main_container, bg=layer['bg'])
-            grad_frame.place(x=0, y=0, relwidth=1, relheight=layer['height'], rely=layer['y'])
-        
-        # Clean login card - เพิ่มความสูง
-        login_card = tk.Frame(main_container, bg='white', padx=50, pady=40)
-        login_card.place(relx=0.5, rely=0.5, anchor='center', width=420, height=650)
-        
-        # Soft shadow effect
-        shadow = tk.Frame(main_container, bg='#e2e8f0', padx=50, pady=40)
-        shadow.place(relx=0.5, rely=0.5, anchor='center', width=420, height=650, x=3, y=3)
-        login_card.lift()
-        
-        # === HEADER SECTION ===
-        self._create_header(login_card)
-        
-        # === FORM SECTION ===
-        self._create_form(login_card)
-        
-        # === FOOTER SECTION ===
-        self._create_footer(login_card)
-        
-        # Settings button at top right corner - ปรับให้เข้ากับ theme
-        settings_btn = tk.Button(main_container, text="⚙️",
-                            font=('Segoe UI', 16),
-                            bg='#27272a', fg='#9ca3af',
-                            activebackground='#3f3f46',
-                            activeforeground='#d1d5db',
-                            border=0, padx=15, pady=10,
-                            cursor='hand2',
-                            relief='flat',
-                            command=self.show_config)
-        settings_btn.place(relx=1.0, rely=0.0, anchor='ne', x=-20, y=20)
-        
-        # Settings hover effects
-        settings_btn.bind("<Enter>", lambda e: settings_btn.config(bg='#3f3f46', fg='#d1d5db'))
-        settings_btn.bind("<Leave>", lambda e: settings_btn.config(bg='#27272a', fg='#9ca3af'))
-    
-    def _create_header(self, parent):
-        """สร้าง Header Section"""
-        header_section = tk.Frame(parent, bg='white', height=220)  
-        header_section.pack(fill='x', pady=(10, 20)) 
-        header_section.pack_propagate(False)
-        
-        # Logo
-        logo_container = tk.Frame(header_section, bg='white')
-        logo_container.pack(pady=(20, 15))
-        
-        # โหลด logo จากฐานข้อมูล
-        if self.logo_image:
-            # แสดง logo จากฐานข้อมูล
-            logo_label = tk.Label(logo_container, image=self.logo_image, bg='white')
-            logo_label.pack()
-            logo_label.image = self.logo_image  # เก็บ reference
-        else:
-            # แสดง logo เริ่มต้น
-            logo_bg = tk.Frame(logo_container, bg='#6366f1', width=70, height=70)
-            logo_bg.pack()
-            logo_bg.pack_propagate(False)
-            
-            tk.Label(logo_bg, text="📊", font=('Segoe UI Emoji', 24), 
-                    fg='white', bg='#6366f1').pack(expand=True)
-        
+        self.root.title("โปรแกรมจัดการเอกสาร")
+
+        # โหลด logo ครั้งเดียว (ทั้งสองขนาด)
+        self.logo_image, self.logo_image_large = self._load_logos()
+
+        # ── Body: left logo | right form ──────────────────────────
+        body = tk.Frame(self.root, bg=self._BODY_BG)
+        body.pack(fill="both", expand=True)
+
+        # ── Left panel: Logo เต็มพื้นที่ ─────────────────────────
+        left = tk.Frame(body, bg="white")
+        left.pack(side="left", fill="both", expand=True)
+        self._build_logo_panel(left)
+
+        # ── Right panel: ฟอร์ม login ──────────────────────────────
+        right = tk.Frame(body, bg=self._BODY_BG, width=420)
+        right.pack(side="right", fill="y")
+        right.pack_propagate(False)
+
+        # gear ⚙ บนขวาสุด
+        gear_btn = tk.Button(
+            right, text="⚙", font=("Segoe UI", 12),
+            bg=self._BODY_BG, fg="#94a3b8",
+            activebackground="#e2e8f0", activeforeground="#334155",
+            border=0, padx=8, pady=6, cursor="hand2", relief="flat",
+            command=self.show_config)
+        gear_btn.pack(anchor="ne", padx=12, pady=(12, 0))
+        gear_btn.bind("<Enter>",
+                      lambda e: gear_btn.config(fg="#334155"))
+        gear_btn.bind("<Leave>",
+                      lambda e: gear_btn.config(fg="#94a3b8"))
+
+        # vertical spacers sandwich the card
+        tk.Frame(right, bg=self._BODY_BG).pack(fill="both", expand=True)
+        self._build_login_card(right)
+        tk.Frame(right, bg=self._BODY_BG).pack(fill="both", expand=True)
+
+        # focus ช่อง username อัตโนมัติเมื่อเปิดหน้า login
+        self.root.after(100, lambda: self.username_entry.focus_set())
+
+    # ── Left banner panel ──────────────────────────────────────────
+    def _build_logo_panel(self, parent):
+        """แผงซ้าย – แสดง login_banner.png เต็มพื้นที่ (cover-fit)
+        ถ้าไม่พบไฟล์ให้ fallback เป็น logo จาก DB หรือ placeholder"""
+
+        # โหลด PIL image สำหรับแผงซ้าย
+        banner_pil = None
+
+        # 1) ลองโหลด login_banner.png ก่อน
+        try:
+            if getattr(sys, 'frozen', False):
+                base_path = os.path.dirname(sys.executable)
+            else:
+                base_path = os.path.dirname(os.path.abspath(__file__))
+            banner_path = os.path.join(base_path, 'login_banner.png')
+            if os.path.isfile(banner_path):
+                banner_pil = Image.open(banner_path)
+        except Exception as e:
+            print(f"โหลด login_banner.png ไม่ได้: {e}")
+
+        # 2) fallback → logo จาก DB
+        if banner_pil is None:
+            banner_pil = getattr(self, '_logo_pil', None)
+
+        if banner_pil is None:
+            # 3) fallback → placeholder
+            parent.config(bg="#1e3a5f")
+            inner = tk.Frame(parent, bg="#1e3a5f")
+            inner.place(relx=0.5, rely=0.5, anchor="center")
+            tk.Label(inner, text="📄",
+                     font=("Segoe UI Emoji", 80),
+                     fg="#3b82f6", bg="#1e3a5f").pack()
+            tk.Label(inner, text="DocFlow Manager",
+                     font=("Segoe UI", 14, "bold"),
+                     fg="#93c5fd", bg="#1e3a5f").pack(pady=(8, 0))
+            return
+
+        # เก็บ PIL ไว้ใช้ใน resize
+        self._banner_pil = banner_pil
+
+        # Label เต็มพื้นที่ (cover-fit: ขยายเต็ม parent ไม่เว้นขอบ)
+        lbl = tk.Label(parent, bg="white", bd=0, highlightthickness=0)
+        lbl.place(x=0, y=0, relwidth=1.0, relheight=1.0)
+
+        def _on_resize(event):
+            pw, ph = event.width, event.height
+            if pw < 10 or ph < 10:
+                return
+            iw, ih = self._banner_pil.size
+            # cover-fit: scale ให้เต็มทั้งสองด้าน แล้วตัดส่วนเกิน
+            scale = max(pw / iw, ph / ih)
+            nw = int(iw * scale)
+            nh = int(ih * scale)
+            img = self._banner_pil.resize((nw, nh), Image.Resampling.LANCZOS)
+            # crop ให้ได้ pw×ph (จากกึ่งกลาง)
+            x0 = (nw - pw) // 2
+            y0 = (nh - ph) // 2
+            img = img.crop((x0, y0, x0 + pw, y0 + ph))
+            photo = ImageTk.PhotoImage(img)
+            lbl.config(image=photo)
+            lbl.image = photo   # prevent GC
+
+        parent.bind("<Configure>", _on_resize)
+
+    # ── Right login form ───────────────────────────────────────────
+    def _build_login_card(self, parent):
+        """ฟอร์ม Login ฝั่งขวา (ไม่มี card box – วางตรงกลาง)"""
+        bg = self._BODY_BG
+        wrap = tk.Frame(parent, bg=bg)
+        wrap.pack(fill="x", padx=40)
+
         # Title
-        tk.Label(header_section, text="ระบบวางบิล", 
-                font=('Segoe UI', 20, 'bold'), 
-                fg='#374151', bg='white').pack(pady=(5, 5))
-        
-        # Subtitle
-        tk.Label(header_section, text="ระบบจัดการเอกสารวางบิล", 
-            font=('Segoe UI', 11), 
-            fg='#6b7280', bg='white').pack()    
-        
-    def _create_form(self, parent):
-        """สร้าง Form Section"""
-        form_section = tk.Frame(parent, bg='white')
-        form_section.pack(fill='x', pady=(0, 30))
-        
-        # Username field
-        self._create_username_field(form_section)
-        
-        # Password field
-        self._create_password_field(form_section)
-        
-        # Login button
-        self._create_login_button(form_section)
-    
-    def _create_username_field(self, parent):
-        """สร้างช่องกรอก Username"""
-        username_container = tk.Frame(parent, bg='white')
-        username_container.pack(fill='x', pady=(0, 20))
-        
-        tk.Label(username_container, text="ชื่อผู้ใช้",
-                font=('Segoe UI', 10, 'bold'),
-                fg='#374151', bg='white').pack(anchor='w', pady=(0, 6))
-        
-        username_bg = tk.Frame(username_container, bg='#f9fafb', relief='solid', bd=1)
-        username_bg.pack(fill='x')
-        
-        self.username_entry = tk.Entry(username_bg, font=('Segoe UI', 11),
-                        bg='#f9fafb', fg='#374151',
-                        border=0, insertbackground='#6366f1')
-        self.username_entry.pack(fill='x', padx=14, pady=12)
-        self.username_entry.bind("<Return>", lambda event: self.handle_login())
-        
-        # Focus effects
-        def on_focus_in(event):
-            username_bg.config(bg='#f0f9ff', relief='solid', bd=2)
-            self.username_entry.config(bg='#f0f9ff')
-            
-        def on_focus_out(event):
-            username_bg.config(bg='#f9fafb', relief='solid', bd=1)
-            self.username_entry.config(bg='#f9fafb')
-        
-        self.username_entry.bind("<FocusIn>", on_focus_in)
-        self.username_entry.bind("<FocusOut>", on_focus_out)
-    
-    def _create_password_field(self, parent):
-        """สร้างช่องกรอก Password"""
-        password_container = tk.Frame(parent, bg='white')
-        password_container.pack(fill='x', pady=(0, 20))
-        
-        tk.Label(password_container, text="รหัสผ่าน",
-                font=('Segoe UI', 10, 'bold'),
-                fg='#374151', bg='white').pack(anchor='w', pady=(0, 6))
-        
-        password_bg = tk.Frame(password_container, bg='#f9fafb', relief='solid', bd=1)
-        password_bg.pack(fill='x')
-        
-        self.password_entry = tk.Entry(password_bg, font=('Segoe UI', 11),
-                        bg='#f9fafb', fg='#374151',
-                        border=0, show='•',
-                        insertbackground='#6366f1')
-        self.password_entry.pack(fill='x', padx=14, pady=12)
-        self.password_entry.bind("<Return>", lambda event: self.handle_login())
-        
-        # Focus effects
-        def on_focus_in(event):
-            password_bg.config(bg='#f0f9ff', relief='solid', bd=2)
-            self.password_entry.config(bg='#f0f9ff')
-            
-        def on_focus_out(event):
-            password_bg.config(bg='#f9fafb', relief='solid', bd=1)
-            self.password_entry.config(bg='#f9fafb')
-        
-        self.password_entry.bind("<FocusIn>", on_focus_in)
-        self.password_entry.bind("<FocusOut>", on_focus_out)
-    
+        tk.Label(wrap, text="เข้าสู่ระบบ",
+                 font=("Segoe UI", 22, "bold"),
+                 fg="#111827", bg=bg).pack(anchor="w")
+        tk.Label(wrap, text="กรุณากรอกชื่อผู้ใช้และรหัสผ่าน",
+                 font=("Segoe UI", 10),
+                 fg="#6b7280", bg=bg).pack(anchor="w", pady=(4, 24))
+
+        # Form fields + button (ส่ง bg ไปด้วยเพราะพื้นหลังไม่ขาวแล้ว)
+        self._create_username_field(wrap, bg=bg)
+        self._create_password_field(wrap, bg=bg)
+        self._create_login_button(wrap)
+
+        # Copyright
+        tk.Label(wrap,
+                 text="© 2025 DocFlow Manager · All rights reserved",
+                 font=("Segoe UI", 8),
+                 fg="#9ca3af", bg=bg).pack(pady=(20, 0))
+
+    def _create_username_field(self, parent, bg="#f1f5f9"):
+        wrap = tk.Frame(parent, bg=bg)
+        wrap.pack(fill="x", pady=(0, 16))
+
+        tk.Label(wrap, text="ชื่อผู้ใช้",
+                 font=("Segoe UI", 10, "bold"),
+                 fg="#334155", bg=bg).pack(anchor="w", pady=(0, 6))
+
+        field_bg = tk.Frame(wrap, bg="white",
+                             highlightbackground="#e2e8f0",
+                             highlightthickness=1)
+        field_bg.pack(fill="x")
+
+        self.username_entry = tk.Entry(
+            field_bg, font=("Segoe UI", 11),
+            bg="white", fg="#0f172a",
+            border=0, insertbackground="#4f46e5")
+        self.username_entry.pack(fill="x", padx=14, pady=11)
+        self.username_entry.bind("<Return>", lambda e: self.handle_login())
+        self.username_entry.bind(
+            "<FocusIn>",
+            lambda e: (field_bg.config(bg="#eff6ff",
+                                        highlightbackground="#93c5fd",
+                                        highlightthickness=2),
+                       self.username_entry.config(bg="#eff6ff")))
+        self.username_entry.bind(
+            "<FocusOut>",
+            lambda e: (field_bg.config(bg="white",
+                                        highlightbackground="#e2e8f0",
+                                        highlightthickness=1),
+                       self.username_entry.config(bg="white")))
+
+    def _create_password_field(self, parent, bg="#f1f5f9"):
+        wrap = tk.Frame(parent, bg=bg)
+        wrap.pack(fill="x", pady=(0, 24))
+
+        tk.Label(wrap, text="รหัสผ่าน",
+                 font=("Segoe UI", 10, "bold"),
+                 fg="#334155", bg=bg).pack(anchor="w", pady=(0, 6))
+
+        field_bg = tk.Frame(wrap, bg="white",
+                             highlightbackground="#e2e8f0",
+                             highlightthickness=1)
+        field_bg.pack(fill="x")
+
+        self.password_entry = tk.Entry(
+            field_bg, font=("Segoe UI", 11),
+            bg="white", fg="#0f172a",
+            border=0, show="•",
+            insertbackground="#4f46e5")
+        self.password_entry.pack(fill="x", padx=14, pady=11)
+        self.password_entry.bind("<Return>", lambda e: self.handle_login())
+        self.password_entry.bind(
+            "<FocusIn>",
+            lambda e: (field_bg.config(bg="#eff6ff",
+                                        highlightbackground="#93c5fd",
+                                        highlightthickness=2),
+                       self.password_entry.config(bg="#eff6ff")))
+        self.password_entry.bind(
+            "<FocusOut>",
+            lambda e: (field_bg.config(bg="white",
+                                        highlightbackground="#e2e8f0",
+                                        highlightthickness=1),
+                       self.password_entry.config(bg="white")))
+
     def _create_login_button(self, parent):
-        """สร้างปุ่ม Login"""
-        # สร้าง frame สำหรับจัดตำแหน่งปุ่ม
-        btn_frame = tk.Frame(parent, bg='white')
-        btn_frame.pack(fill='x', pady=(25, 0))
-        
-        login_btn = tk.Button(btn_frame, text="เข้าสู่ระบบ",  # เปลี่ยนเป็น btn_frame
-                            font=('Segoe UI', 13, 'bold'),
-                            bg='#0284c7', fg='white',
-                            activebackground='#0369a1',
-                            activeforeground='white',
-                            border=0, 
-                            pady=16,
-                            cursor='hand2',
-                            relief='flat',
-                            command=self.handle_login)
-        login_btn.pack(fill='x', padx=40)  
-        
-        # Hover effects
-        login_btn.bind("<Enter>", lambda e: login_btn.config(bg='#0369a1'))
-        login_btn.bind("<Leave>", lambda e: login_btn.config(bg='#0284c7'))    
-        
-    def _create_footer(self, parent):
-        """สร้าง Footer Section"""
-        footer_section = tk.Frame(parent, bg='white')
-        footer_section.pack(side='bottom', fill='x')
-        
-        tk.Label(footer_section, text="© 2025 DocFlow Manager", 
-               font=('Segoe UI', 9), 
-               fg='#9ca3af', bg='white').pack(pady=(10, 0))
-        
+        btn = tk.Button(
+            parent, text="เข้าสู่ระบบ",
+            font=("Segoe UI", 12, "bold"),
+            bg="#4f46e5", fg="white",
+            activebackground="#4338ca", activeforeground="white",
+            border=0, pady=14, cursor="hand2", relief="flat",
+            command=self.handle_login)
+        btn.pack(fill="x")
+        btn.bind("<Enter>", lambda e: btn.config(bg="#4338ca"))
+        btn.bind("<Leave>", lambda e: btn.config(bg="#4f46e5"))
+
     def show_config(self):
         """เปิดหน้าตั้งค่า"""
         try:
             from config import ConfigUI
             ConfigUI(self.root)
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถเปิดหน้า Config ได้: {str(e)}")
-            print(f"Config error: {e}")
-    
+            messagebox.showerror("ข้อผิดพลาด",
+                                  f"ไม่สามารถเปิดหน้า Config ได้: {str(e)}",
+                                  parent=self.root)
+
     def handle_login(self):
         """จัดการการ Login"""
         username = self.username_entry.get().strip()
         password = self.password_entry.get().strip()
-        
+
         if not username or not password:
-            messagebox.showwarning("คำเตือน", "กรุณากรอกข้อมูลให้ครบถ้วน")
+            messagebox.showwarning("คำเตือน", "กรุณากรอกข้อมูลให้ครบถ้วน",
+                                    parent=self.root)
             return
-        
+
         user_data = self.auth_service.verify_user(username, password)
-        
+
         if user_data:
             self.on_login_success(user_data)
         else:
-            messagebox.showerror("ข้อผิดพลาด", "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
+            messagebox.showerror("ข้อผิดพลาด",
+                                  "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
+                                  parent=self.root)
+
 
 # ตัวอย่างการใช้งาน (สำหรับทดสอบ)
 if __name__ == "__main__":

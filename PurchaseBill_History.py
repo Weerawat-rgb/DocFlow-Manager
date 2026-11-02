@@ -17,11 +17,13 @@ class PurchaseBillHistoryUI:
         try:
             self.db = PurchaseBillDatabase()
             if not self.db.test_connection():
-                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถเชื่อมต่อฐานข้อมูลได้")
+                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถเชื่อมต่อฐานข้อมูลได้",
+                    parent=self.window)
                 self.window.destroy()
                 return
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ข้อผิดพลาดฐานข้อมูล: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ข้อผิดพลาดฐานข้อมูล: {str(e)}",
+                parent=self.window)
             self.window.destroy()
             return
         
@@ -284,7 +286,8 @@ class PurchaseBillHistoryUI:
             self.status_label.config(text=f"โหลดข้อมูล {len(billing_history)} รายการ")
             
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถโหลดประวัติได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถโหลดประวัติได้: {str(e)}",
+                parent=self.window)
 
     def search_history(self, event=None):
         """ค้นหาประวัติ"""
@@ -333,7 +336,8 @@ class PurchaseBillHistoryUI:
             self.status_label.config(text=f"พบข้อมูล {len(billing_history)} รายการ")
             
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถค้นหาได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถค้นหาได้: {str(e)}",
+                parent=self.window)
                                     
     def on_item_select(self, event):
         """เมื่อเลือกรายการ"""
@@ -357,7 +361,8 @@ class PurchaseBillHistoryUI:
     def view_details(self):
         """ดูรายละเอียดใบวางบิล"""
         if not self.selected_billing_doc:
-            messagebox.showwarning("คำเตือน", "กรุณาเลือกรายการที่ต้องการดู")
+            messagebox.showwarning("คำเตือน", "กรุณาเลือกรายการที่ต้องการดู",
+                parent=self.window)
             return
         
         try:
@@ -367,7 +372,8 @@ class PurchaseBillHistoryUI:
             self.show_detail_window(billing_detail, billing_items)
             
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถดูรายละเอียดได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถดูรายละเอียดได้: {str(e)}",
+                parent=self.window)
     
     def show_detail_window(self, billing_detail, billing_items):
         """แสดงหน้าต่างรายละเอียด"""
@@ -460,14 +466,16 @@ class PurchaseBillHistoryUI:
     def reprint_document(self):
         """พิมพ์ซ้ำเอกสาร"""
         if not self.selected_billing_doc:
-            messagebox.showwarning("คำเตือน", "กรุณาเลือกรายการที่ต้องการพิมพ์ซ้ำ")
+            messagebox.showwarning("คำเตือน", "กรุณาเลือกรายการที่ต้องการพิมพ์ซ้ำ",
+                parent=self.window)
             return
         
         try:
             billing_detail = self.db.get_billing_detail(self.selected_billing_doc)
             
             if not billing_detail:
-                messagebox.showerror("ข้อผิดพลาด", "ไม่พบข้อมูลเอกสาร")
+                messagebox.showerror("ข้อผิดพลาด", "ไม่พบข้อมูลเอกสาร",
+                    parent=self.window)
                 return
             
             status = billing_detail.get('Status', '')
@@ -475,7 +483,8 @@ class PurchaseBillHistoryUI:
                 messagebox.showwarning(
                     "ไม่สามารถพิมพ์ได้", 
                     f"เอกสาร {self.selected_billing_doc} ถูกยกเลิกแล้ว\n\nไม่สามารถพิมพ์ซ้ำเอกสารที่ยกเลิกได้"
-                )
+                ,
+                    parent=self.window)
                 return
             
             billing_items = self.db.get_billing_items(self.selected_billing_doc)
@@ -486,9 +495,11 @@ class PurchaseBillHistoryUI:
             BillingNoteGenerator.Preview_Template_With_Data(template_data, 'purchase')
             
         except ImportError:
-            messagebox.showerror("ข้อผิดพลาด", "ไม่พบ BillingNoteGenerator")
+            messagebox.showerror("ข้อผิดพลาด", "ไม่พบ BillingNoteGenerator",
+                parent=self.window)
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถพิมพ์ซ้ำได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถพิมพ์ซ้ำได้: {str(e)}",
+                parent=self.window)
             import traceback
             traceback.print_exc()
                 

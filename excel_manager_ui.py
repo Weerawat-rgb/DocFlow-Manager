@@ -1,4 +1,5 @@
 import tkinter as tk
+import theme
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
 import pandas as pd
@@ -29,11 +30,13 @@ class ExcelManagerUI:
         try:
             self.db = ExcelManagerDatabase()
             if not self.db.test_connection():
-                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถเชื่อมต่อฐานข้อมูลได้")
+                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถเชื่อมต่อฐานข้อมูลได้",
+                    parent=self.window)
                 self.window.destroy()
                 return
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ข้อผิดพลาดฐานข้อมูล: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ข้อผิดพลาดฐานข้อมูล: {str(e)}",
+                parent=self.window)
             self.window.destroy()
             return
         
@@ -44,7 +47,7 @@ class ExcelManagerUI:
         self.window.title("นำเข้าข้อมูล Excel")
         self.window.state('zoomed')
         self.window.geometry("1200x700")
-        self.window.configure(bg='#f8fafc')
+        self.window.configure(bg=theme.BG_PAGE)
         self.center_window()
         self.create_header()
         
@@ -58,44 +61,16 @@ class ExcelManagerUI:
         self.window.geometry(f"{width}x{height}+{x}+{y}")
     
     def create_header(self):
-        """สร้าง Header"""
-        header = tk.Frame(self.window, bg='#1f2937', height=80)
-        header.pack(fill='x')
-        header.pack_propagate(False)
-        
-        header_content = tk.Frame(header, bg='#1f2937')
-        header_content.pack(fill='both', expand=True, padx=30, pady=15)
-        
-        # Left side
-        left_frame = tk.Frame(header_content, bg='#1f2937')
-        left_frame.pack(side='left', fill='y')
-        
-        title = "นำเข้าข้อมูล Excel - สร้างใบรับสินค้าใหม่"
-        
-        tk.Label(left_frame, text=title, 
-                font=('Segoe UI', 18, 'bold'), 
-                fg='white', bg='#1f2937').pack(anchor='w')
-        
-        tk.Label(left_frame, text="นำเข้าข้อมูลจากไฟล์ Excel เข้าสู่ระบบ", 
-                font=('Segoe UI', 9), 
-                fg='#d1d5db', bg='#1f2937').pack(anchor='w')
-        
-        # Right side
-        right_frame = tk.Frame(header_content, bg='#1f2937')
-        right_frame.pack(side='right', fill='y')
-        
-        tk.Label(right_frame, text=f"{self.user_data['username']}", 
-               font=('Segoe UI', 11), 
-               fg='white', bg='#1f2937').pack(anchor='e')
-        
-        close_btn = tk.Button(right_frame, text="ปิดหน้าต่าง",
-                             font=('Segoe UI', 9),
-                             bg='#ef4444', fg='white',
-                             border=0, padx=15, pady=6,
-                             cursor='hand2',
-                             command=self.close_window)
-        close_btn.pack(anchor='e', pady=(5, 0))
-    
+        theme.configure_styles()
+        theme.build_header(
+            self.window,
+            title    = "📤 นำเข้าข้อมูล Excel",
+            subtitle = "นำเข้าข้อมูลจากไฟล์ Excel เข้าสู่ระบบ",
+            username = self.user_data.get("username", ""),
+            accent   = theme.PURPLE,
+            on_close = self.close_window,
+        )
+
     def create_ui(self):
         """สร้าง UI หลัก"""
         # Main content
@@ -343,7 +318,8 @@ class ExcelManagerUI:
             )
             
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถดาวน์โหลด template ได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถดาวน์โหลด template ได้: {str(e)}",
+                parent=self.window)
     
     def browse_import_file(self):
         """เลือกไฟล์ Excel สำหรับ import"""

@@ -17,11 +17,13 @@ class BranchBillHistoryUI:
         try:
             self.db = BranchBillDatabase()
             if not self.db.test_connection():
-                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถเชื่อมต่อฐานข้อมูลได้")
+                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถเชื่อมต่อฐานข้อมูลได้",
+                    parent=self.window)
                 self.window.destroy()
                 return
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ข้อผิดพลาดฐานข้อมูล: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ข้อผิดพลาดฐานข้อมูล: {str(e)}",
+                parent=self.window)
             self.window.destroy()
             return
         
@@ -168,22 +170,24 @@ class BranchBillHistoryUI:
         style.configure("History.Treeview.Heading", 
                     font=('Segoe UI', 11, 'bold'))
         
-        columns = ('BillingDocNumber', 'CreateDate', 'BranchName', 'TotalAmount', 'TotalItems', 'CreatedBy', 'Status')
+        columns = ('BillingDocNumber', 'CreateDate', 'BranchName', 'TotalAmount', 'DiscountAmount', 'NetTotal', 'TotalItems', 'CreatedBy', 'Status')
         
         self.history_tree = ttk.Treeview(table_frame, columns=columns, show='headings', 
                                         style="History.Treeview")
         
-        # Configure columns - ปรับความกว้างให้พอดี
+        # Configure columns - เพิ่มคอลัมน์ส่วนลดและยอดสุทธิ
         column_config = {
             'BillingDocNumber': {'text': 'เลขที่เอกสาร', 'width': 110, 'anchor': 'center'},
             'CreateDate': {'text': 'วันที่สร้าง', 'width': 95, 'anchor': 'center'},
-            'BranchName': {'text': 'ชื่อสาขา', 'width': 180, 'anchor': 'w'},
-            'TotalAmount': {'text': 'ยอดรวม (บาท)', 'width': 100, 'anchor': 'e'},
-            'TotalItems': {'text': 'รายการ', 'width': 70, 'anchor': 'center'},
-            'CreatedBy': {'text': 'ผู้สร้าง', 'width': 85, 'anchor': 'center'},
-            'Status': {'text': 'สถานะ', 'width': 75, 'anchor': 'center'}
-        }
-        
+            'BranchName': {'text': 'ชื่อสาขา', 'width': 160, 'anchor': 'w'},
+            'TotalAmount': {'text': 'ยอดรวม', 'width': 90, 'anchor': 'e'},
+            'DiscountAmount': {'text': 'ส่วนลด', 'width': 80, 'anchor': 'e'},
+            'NetTotal': {'text': 'ยอดสุทธิ', 'width': 90, 'anchor': 'e'},
+            'TotalItems': {'text': 'รายการ', 'width': 60, 'anchor': 'center'},
+            'CreatedBy': {'text': 'ผู้สร้าง', 'width': 80, 'anchor': 'center'},
+            'Status': {'text': 'สถานะ', 'width': 70, 'anchor': 'center'}
+        }  
+              
         for col in columns:
             self.history_tree.heading(col, text=column_config[col]['text'], anchor='center')
             self.history_tree.column(col, 
@@ -240,99 +244,129 @@ class BranchBillHistoryUI:
         self.status_label.pack(side='right')
             
     def load_billing_history(self):
-        """โหลดประวัติใบวางบิล"""
-        try:
-            for item in self.history_tree.get_children():
-                self.history_tree.delete(item)
-            
-            date_from = self.date_from.get_date().strftime('%Y-%m-%d') + ' 00:00:00'
-            date_to = self.date_to.get_date().strftime('%Y-%m-%d') + ' 23:59:59'
-            
-            billing_history = self.db.get_billing_history(date_from, date_to)
-            
-            for billing in billing_history:
-                create_date = billing.get('CreateDate', '')
-                if isinstance(create_date, datetime):
-                    create_date_str = create_date.strftime('%d/%m/%Y')
-                else:
-                    create_date_str = str(create_date)[:10] if create_date else ''
+            """โหลดประวัติใบวางบิล"""
+            try:
+                for item in self.history_tree.get_children():
+                    self.history_tree.delete(item)
                 
-                try:
-                    amount = float(billing.get('TotalAmount', 0))
-                    amount_str = f"{amount:,.2f}"
-                except:
-                    amount_str = str(billing.get('TotalAmount', '0'))
+                date_from = self.date_from.get_date().strftime('%Y-%m-%d') + ' 00:00:00'
+                date_to = self.date_to.get_date().strftime('%Y-%m-%d') + ' 23:59:59'
                 
-                status = billing.get('Status', '')
+                billing_history = self.db.get_billing_history(date_from, date_to)
                 
-                item_id = self.history_tree.insert('', 'end', values=(
-                    billing.get('BillingDocNumber', ''),
-                    create_date_str,
-                    billing.get('BranchName', ''),
-                    amount_str,
-                    billing.get('TotalItems', ''),
-                    billing.get('CreatedBy', ''),
-                    status
-                ))
+                for billing in billing_history:
+                    create_date = billing.get('CreateDate', '')
+                    if isinstance(create_date, datetime):
+                        create_date_str = create_date.strftime('%d/%m/%Y')
+                    else:
+                        create_date_str = str(create_date)[:10] if create_date else ''
+                    
+                    try:
+                        amount = float(billing.get('TotalAmount', 0))
+                        amount_str = f"{amount:,.2f}"
+                    except:
+                        amount_str = str(billing.get('TotalAmount', '0'))
+                    
+                    try:
+                        discount = float(billing.get('DiscountAmount', 0))
+                        discount_str = f"{discount:,.2f}"
+                    except:
+                        discount_str = "0.00"
+                    
+                    try:
+                        net_total = float(billing.get('NetTotal', 0))
+                        net_str = f"{net_total:,.2f}"
+                    except:
+                        net_str = amount_str
+                    
+                    status = billing.get('Status', '')
+                    
+                    item_id = self.history_tree.insert('', 'end', values=(
+                        billing.get('BillingDocNumber', ''),
+                        create_date_str,
+                        billing.get('BranchName', ''),
+                        amount_str,
+                        discount_str,
+                        net_str,
+                        billing.get('TotalItems', ''),
+                        billing.get('CreatedBy', ''),
+                        status
+                    ))
+                    
+                    if status == 'InActive':
+                        self.history_tree.item(item_id, tags=('cancelled',))
                 
-                if status == 'InActive':
-                    self.history_tree.item(item_id, tags=('cancelled',))
-            
-            self.history_tree.tag_configure('cancelled', foreground='#ef4444')
-            
-            self.status_label.config(text=f"โหลดข้อมูล {len(billing_history)} รายการ")
-            
-        except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถโหลดประวัติได้: {str(e)}")
-
+                self.history_tree.tag_configure('cancelled', foreground='#ef4444')
+                
+                self.status_label.config(text=f"โหลดข้อมูล {len(billing_history)} รายการ")
+                
+            except Exception as e:
+                messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถโหลดประวัติได้: {str(e)}",
+                    parent=self.window)
+                
     def search_history(self, event=None):
-        """ค้นหาประวัติ"""
-        search_term = self.search_entry.get().strip()
-        
-        try:
-            date_from = self.date_from.get_date().strftime('%Y-%m-%d') + ' 00:00:00'
-            date_to = self.date_to.get_date().strftime('%Y-%m-%d') + ' 23:59:59'
+            """ค้นหาประวัติ"""
+            search_term = self.search_entry.get().strip()
             
-            for item in self.history_tree.get_children():
-                self.history_tree.delete(item)
-            
-            billing_history = self.db.search_billing_history(search_term, date_from, date_to)
-            
-            for billing in billing_history:
-                create_date = billing.get('CreateDate', '')
-                if isinstance(create_date, datetime):
-                    create_date_str = create_date.strftime('%d/%m/%Y')
-                else:
-                    create_date_str = str(create_date)[:10] if create_date else ''
+            try:
+                date_from = self.date_from.get_date().strftime('%Y-%m-%d') + ' 00:00:00'
+                date_to = self.date_to.get_date().strftime('%Y-%m-%d') + ' 23:59:59'
                 
-                try:
-                    amount = float(billing.get('TotalAmount', 0))
-                    amount_str = f"{amount:,.2f}"
-                except:
-                    amount_str = str(billing.get('TotalAmount', '0'))
+                for item in self.history_tree.get_children():
+                    self.history_tree.delete(item)
                 
-                status = billing.get('Status', '')
+                billing_history = self.db.search_billing_history(search_term, date_from, date_to)
                 
-                item_id = self.history_tree.insert('', 'end', values=(
-                    billing.get('BillingDocNumber', ''),
-                    create_date_str,
-                    billing.get('BranchName', ''),
-                    amount_str,
-                    billing.get('TotalItems', ''),
-                    billing.get('CreatedBy', ''),
-                    status
-                ))
+                for billing in billing_history:
+                    create_date = billing.get('CreateDate', '')
+                    if isinstance(create_date, datetime):
+                        create_date_str = create_date.strftime('%d/%m/%Y')
+                    else:
+                        create_date_str = str(create_date)[:10] if create_date else ''
+                    
+                    try:
+                        amount = float(billing.get('TotalAmount', 0))
+                        amount_str = f"{amount:,.2f}"
+                    except:
+                        amount_str = str(billing.get('TotalAmount', '0'))
+                    
+                    try:
+                        discount = float(billing.get('DiscountAmount', 0))
+                        discount_str = f"{discount:,.2f}"
+                    except:
+                        discount_str = "0.00"
+                    
+                    try:
+                        net_total = float(billing.get('NetTotal', 0))
+                        net_str = f"{net_total:,.2f}"
+                    except:
+                        net_str = amount_str
+                    
+                    status = billing.get('Status', '')
+                    
+                    item_id = self.history_tree.insert('', 'end', values=(
+                        billing.get('BillingDocNumber', ''),
+                        create_date_str,
+                        billing.get('BranchName', ''),
+                        amount_str,
+                        discount_str,
+                        net_str,
+                        billing.get('TotalItems', ''),
+                        billing.get('CreatedBy', ''),
+                        status
+                    ))
+                    
+                    if status == 'InActive':
+                        self.history_tree.item(item_id, tags=('cancelled',))
                 
-                if status == 'InActive':
-                    self.history_tree.item(item_id, tags=('cancelled',))
-            
-            self.history_tree.tag_configure('cancelled', foreground='#ef4444')
-            
-            self.status_label.config(text=f"พบข้อมูล {len(billing_history)} รายการ")
-            
-        except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถค้นหาได้: {str(e)}")
-                                    
+                self.history_tree.tag_configure('cancelled', foreground='#ef4444')
+                
+                self.status_label.config(text=f"พบข้อมูล {len(billing_history)} รายการ")
+                
+            except Exception as e:
+                messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถค้นหาได้: {str(e)}",
+                    parent=self.window)
+                                                    
     def on_item_select(self, event):
         """เมื่อเลือกรายการ"""
         self.history_tree.after(10, self._update_selection)
@@ -355,7 +389,8 @@ class BranchBillHistoryUI:
     def view_details(self):
         """ดูรายละเอียดใบวางบิล"""
         if not self.selected_billing_doc:
-            messagebox.showwarning("คำเตือน", "กรุณาเลือกรายการที่ต้องการดู")
+            messagebox.showwarning("คำเตือน", "กรุณาเลือกรายการที่ต้องการดู",
+                parent=self.window)
             return
         
         try:
@@ -365,7 +400,8 @@ class BranchBillHistoryUI:
             self.show_detail_window(billing_detail, billing_items)
             
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถดูรายละเอียดได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถดูรายละเอียดได้: {str(e)}",
+                parent=self.window)
     
     def show_detail_window(self, billing_detail, billing_items):
         """แสดงหน้าต่างรายละเอียด"""
@@ -428,15 +464,51 @@ class BranchBillHistoryUI:
         items_tree.pack(fill='both', expand=True, pady=(0, 15))
         
         # Summary
-        summary_frame = tk.Frame(content_frame, bg='#fef3c7', padx=15, pady=10)
+        summary_frame = tk.Frame(content_frame, bg='white', padx=15, pady=10, relief='solid', bd=1)
         summary_frame.pack(fill='x', pady=(0, 15))
         
         total_amount = billing_detail.get('TotalAmount', 0)
+        discount_amount = billing_detail.get('DiscountAmount', 0)
+        net_total = billing_detail.get('NetTotal', 0)
         total_items = billing_detail.get('TotalItems', 0)
         
-        tk.Label(summary_frame, text=f"รวม {total_items} รายการ | ยอดรวม {total_amount:,.2f} บาท",
+        # ยอดรวม
+        total_row = tk.Frame(summary_frame, bg='white')
+        total_row.pack(fill='x', pady=3)
+        tk.Label(total_row, text=f"รวม {total_items} รายการ",
+                font=('Segoe UI', 11),
+                fg='#6b7280', bg='white').pack(side='left')
+        tk.Label(total_row, text=f"ยอดรวม: {total_amount:,.2f} บาท",
+                font=('Segoe UI', 11, 'bold'),
+                fg='#1f2937', bg='white').pack(side='right')
+        
+        # ส่วนลด
+        discount_row = tk.Frame(summary_frame, bg='white')
+        discount_row.pack(fill='x', pady=3)
+        tk.Label(discount_row, text="หัก ส่วนลดท้ายบิล:",
+                font=('Segoe UI', 11),
+                fg='#6b7280', bg='white').pack(side='left')
+        tk.Label(discount_row, text=f"{discount_amount:,.2f} บาท",
+                font=('Segoe UI', 11, 'bold'),
+                fg='#dc2626', bg='white').pack(side='right')
+        
+        # เส้นแบ่ง
+        separator = tk.Frame(summary_frame, bg='#e5e7eb', height=1)
+        separator.pack(fill='x', pady=8)
+        
+        # ยอดสุทธิ
+        net_row = tk.Frame(summary_frame, bg='#f0fdf4', relief='solid', bd=1)
+        net_row.pack(fill='x')
+        net_content = tk.Frame(net_row, bg='#f0fdf4')
+        net_content.pack(fill='x', padx=10, pady=8)
+        
+        tk.Label(net_content, text="ยอดคงเหลือสุทธิ:",
                 font=('Segoe UI', 12, 'bold'),
-                fg='#dc2626', bg='#fef3c7').pack()
+                fg='#166534', bg='#f0fdf4').pack(side='left')
+        tk.Label(net_content, text=f"{net_total:,.2f} บาท",
+                font=('Segoe UI', 13, 'bold'),
+                fg='#15803d', bg='#f0fdf4').pack(side='right')
+        
         
         # Close button
         tk.Button(content_frame, text="ปิด",
@@ -448,14 +520,16 @@ class BranchBillHistoryUI:
     def reprint_document(self):
             """พิมพ์ซ้ำเอกสาร"""
             if not self.selected_billing_doc:
-                messagebox.showwarning("คำเตือน", "กรุณาเลือกรายการที่ต้องการพิมพ์ซ้ำ")
+                messagebox.showwarning("คำเตือน", "กรุณาเลือกรายการที่ต้องการพิมพ์ซ้ำ",
+                    parent=self.window)
                 return
             
             try:
                 billing_detail = self.db.get_billing_detail(self.selected_billing_doc)
                 
                 if not billing_detail:
-                    messagebox.showerror("ข้อผิดพลาด", "ไม่พบข้อมูลเอกสาร")
+                    messagebox.showerror("ข้อผิดพลาด", "ไม่พบข้อมูลเอกสาร",
+                        parent=self.window)
                     return
                 
                 status = billing_detail.get('Status', '')
@@ -463,7 +537,8 @@ class BranchBillHistoryUI:
                     messagebox.showwarning(
                         "ไม่สามารถพิมพ์ได้", 
                         f"เอกสาร {self.selected_billing_doc} ถูกยกเลิกแล้ว\n\nไม่สามารถพิมพ์ซ้ำเอกสารที่ยกเลิกได้"
-                    )
+                    ,
+                        parent=self.window)
                     return
                 
                 billing_items = self.db.get_billing_items(self.selected_billing_doc)
@@ -474,99 +549,110 @@ class BranchBillHistoryUI:
                 BillingNoteGenerator.Preview_Template_With_Data(template_data, 'branch')
                 
             except ImportError:
-                messagebox.showerror("ข้อผิดพลาด", "ไม่พบ BillingNoteGenerator")
+                messagebox.showerror("ข้อผิดพลาด", "ไม่พบ BillingNoteGenerator",
+                    parent=self.window)
             except Exception as e:
-                messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถพิมพ์ซ้ำได้: {str(e)}")
+                messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถพิมพ์ซ้ำได้: {str(e)}",
+                    parent=self.window)
                 import traceback
                 traceback.print_exc()
                     
     def prepare_reprint_data(self, billing_detail, billing_items):
-        """เตรียมข้อมูลสำหรับพิมพ์ซ้ำ"""
-        
-        try:
-            from database_manager import get_company_data
-            company_data = get_company_data()
-        except:
-            company_data = {
-                'Companyname': 'ไม่พบข้อมูลบริษัท',
-                'SiteAddress': '',
-                'PhoneNumber': '',
-                'TaxId': '',
-                'SitePicture': ''
-            }
-        
-        total_amount = billing_detail.get('TotalAmount', 0)
-        
-        additional_items = []
-        first_item = None
-        
-        for i, item in enumerate(billing_items):
-            withdrawal_date = str(item.get('WithdrawalDate', ''))[:10] if item.get('WithdrawalDate') else ''
+            """เตรียมข้อมูลสำหรับพิมพ์ซ้ำ"""
             
-            if withdrawal_date:
+            try:
+                from database_manager import get_company_data
+                company_data = get_company_data()
+            except:
+                company_data = {
+                    'Companyname': 'ไม่พบข้อมูลบริษัท',
+                    'SiteAddress': '',
+                    'PhoneNumber': '',
+                    'TaxId': '',
+                    'SitePicture': ''
+                }
+            
+            total_amount = float(billing_detail.get('TotalAmount', 0))
+            discount_amount = float(billing_detail.get('DiscountAmount', 0))
+            net_total = float(billing_detail.get('NetTotal', 0))
+            
+            # ถ้าไม่มี net_total ให้คำนวณ
+            if net_total == 0:
+                net_total = total_amount - discount_amount
+            
+            additional_items = []
+            first_item = None
+            
+            for i, item in enumerate(billing_items):
+                withdrawal_date = str(item.get('WithdrawalDate', ''))[:10] if item.get('WithdrawalDate') else ''
+                
+                if withdrawal_date:
+                    try:
+                        date_obj = datetime.strptime(withdrawal_date, '%Y-%m-%d')
+                        withdrawal_date = date_obj.strftime('%d/%m/%Y')
+                    except:
+                        pass
+                
                 try:
-                    date_obj = datetime.strptime(withdrawal_date, '%Y-%m-%d')
-                    withdrawal_date = date_obj.strftime('%d/%m/%Y')
+                    amount = float(item.get('TotalAmount', 0))
+                    amount_str = f"{amount:,.2f}"
+                except:
+                    amount_str = "0.00"
+                
+                item_data = {
+                    'order': i + 1,
+                    'type': 'ใบเบิกโอน',
+                    'withdrawalNo': item.get('WithdrawalNumber', ''),
+                    'date': withdrawal_date,
+                    'total': amount_str
+                }
+                
+                if i == 0:
+                    first_item = item_data
+                else:
+                    additional_items.append(item_data)
+            
+            doc_date = str(billing_detail.get('CreateDate', ''))[:10] if billing_detail.get('CreateDate') else ''
+            if doc_date:
+                try:
+                    date_obj = datetime.strptime(doc_date, '%Y-%m-%d')
+                    doc_date = date_obj.strftime('%d/%m/%Y')
                 except:
                     pass
             
-            try:
-                amount = float(item.get('TotalAmount', 0))
-                amount_str = f"{amount:,.2f}"
-            except:
-                amount_str = "0.00"
+            # แปลงยอดสุทธิเป็นภาษาไทย
+            thai_baht_text = self.number_to_thai(net_total)
             
-            item_data = {
-                'order': i + 1,
-                'type': 'ใบเบิกโอน',
-                'withdrawalNo': item.get('WithdrawalNumber', ''),
-                'date': withdrawal_date,
-                'total': amount_str
+            template_data = {
+                'DocumentTitle': 'ใบวางบิลสาขา',
+                
+                'Companyname': company_data.get('Companyname', ''),
+                'SiteAddress': company_data.get('SiteAddress', ''),
+                'PhoneNumber': company_data.get('PhoneNumber', ''),
+                'TaxId': company_data.get('TaxId', ''),
+                'SitePicture': company_data.get('SitePicture', ''),
+                
+                'BranchName': billing_detail.get('BranchName', ''),
+                'BranchAddress': billing_detail.get('BranchAddress', ''),
+                'PhoneMobile': billing_detail.get('BranchPhone', ''),
+                
+                'DocNo': billing_detail.get('BillingDocNumber', ''),
+                'DocDate': doc_date,
+                
+                'WithdrawalNumber': first_item['withdrawalNo'] if first_item else '',
+                'WithdrawalDate': first_item['date'] if first_item else '',
+                'Total': first_item['total'] if first_item else '0.00',
+                
+                'TotalAmount': f"{total_amount:,.2f}",
+                'Discount': f"{discount_amount:,.2f}",      
+                'NetAmount': f"{net_total:,.2f}",           
+                'TextThaiBaht': thai_baht_text,             
+                
+                'additionalItems': additional_items
             }
             
-            if i == 0:
-                first_item = item_data
-            else:
-                additional_items.append(item_data)
+            return template_data
         
-        doc_date = str(billing_detail.get('CreateDate', ''))[:10] if billing_detail.get('CreateDate') else ''
-        if doc_date:
-            try:
-                date_obj = datetime.strptime(doc_date, '%Y-%m-%d')
-                doc_date = date_obj.strftime('%d/%m/%Y')
-            except:
-                pass
-        
-        thai_baht_text = self.number_to_thai(total_amount)
-        
-        template_data = {
-            'DocumentTitle': 'ใบวางบิลสาขา',
-            
-            'Companyname': company_data.get('Companyname', ''),
-            'SiteAddress': company_data.get('SiteAddress', ''),
-            'PhoneNumber': company_data.get('PhoneNumber', ''),
-            'TaxId': company_data.get('TaxId', ''),
-            'SitePicture': company_data.get('SitePicture', ''),
-            
-            'BranchName': billing_detail.get('BranchName', ''),
-            'BranchAddress': billing_detail.get('BranchAddress', ''),
-            'PhoneMobile': billing_detail.get('BranchPhone', ''),
-            
-            'DocNo': billing_detail.get('BillingDocNumber', ''),
-            'DocDate': doc_date,
-            
-            'WithdrawalNumber': first_item['withdrawalNo'] if first_item else '',
-            'WithdrawalDate': first_item['date'] if first_item else '',
-            'Total': first_item['total'] if first_item else '0.00',
-            
-            'TotalAmount': f"{total_amount:,.2f}",
-            'TextThaiBaht': thai_baht_text,
-            
-            'additionalItems': additional_items
-        }
-        
-        return template_data
-
     def number_to_thai(self, amount):
         """แปลงตัวเลขเป็นตัวหนังสือภาษาไทย"""
         try:

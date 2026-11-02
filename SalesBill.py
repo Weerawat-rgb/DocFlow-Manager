@@ -24,7 +24,8 @@ class SalesBillUI:
         try:
             self.db = SalesBillDatabase()
             if not self.db.test_connection():
-                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถเชื่อมต่อฐานข้อมูลได้")
+                messagebox.showerror("ข้อผิดพลาด", "ไม่สามารถเชื่อมต่อฐานข้อมูลได้",
+                    parent=self.window)
                 self.window.destroy()
                 return
             
@@ -33,19 +34,19 @@ class SalesBillUI:
             self.db.test_data()
             
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ข้อผิดพลาดฐานข้อมูล: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ข้อผิดพลาดฐานข้อมูล: {str(e)}",
+                parent=self.window)
             self.window.destroy()
             return
         
         self.show_step1()
         
     def setup_window(self):
-        self.window.title("ระบบใบวางบิลขาย")
-        self.window.geometry("1400x900")
-        self.window.configure(bg='#f8fafc')
-        self.center_window()
+        import theme
+        self.window.title("🛒 ระบบใบวางบิลขาย")
+        theme.setup_toplevel(self.window, "🛒 ระบบใบวางบิลขาย", 1400, 900)
         self.create_header()
-        
+
     def center_window(self):
         self.window.update_idletasks()
         width = 1400
@@ -55,96 +56,28 @@ class SalesBillUI:
         self.window.geometry(f"{width}x{height}+{x}+{y}")
     
     def create_header(self):
-        header = tk.Frame(self.window, bg='#1f2937', height=80)
-        header.pack(fill='x')
-        header.pack_propagate(False)
-        
-        header_content = tk.Frame(header, bg='#1f2937')
-        header_content.pack(fill='both', expand=True, padx=30, pady=15)
-        
-        # Left - Title
-        left_frame = tk.Frame(header_content, bg='#1f2937')
-        left_frame.pack(side='left', fill='y')
-        
-        tk.Label(left_frame, text="🛒 ระบบใบวางบิลขาย", 
-                font=('Segoe UI', 18, 'bold'), 
-                fg='white', bg='#1f2937').pack(anchor='w')
-        
-        tk.Label(left_frame, text="จัดการใบวางบิลการขายสินค้า", 
-                font=('Segoe UI', 9), 
-                fg='#d1d5db', bg='#1f2937').pack(anchor='w')
-        
-        # Right - User info & Close button
-        right_frame = tk.Frame(header_content, bg='#1f2937')
-        right_frame.pack(side='right', fill='y')
-        
-        tk.Label(right_frame, text=f"👤 {self.user_data['username']}", 
-               font=('Segoe UI', 11), 
-               fg='white', bg='#1f2937').pack(anchor='e')
-        
-        close_btn = tk.Button(right_frame, text="✕ ปิดหน้าต่าง",
-                             font=('Segoe UI', 9),
-                             bg='#ef4444', fg='white',
-                             border=0, padx=15, pady=6,
-                             cursor='hand2',
-                             command=self.close_window)
-        close_btn.pack(anchor='e', pady=(5, 0))
-        
+        import theme
+        theme.configure_styles()
+        theme.build_header(
+            self.window,
+            title    = "🛒 ระบบใบวางบิลขาย",
+            subtitle = "จัดการใบวางบิลการขายสินค้า",
+            username = self.user_data["username"],
+            accent   = theme.GREEN,
+            on_close = self.close_window,
+        )
         self.create_step_indicator()
-    
+
     def create_step_indicator(self):
-        # Clear existing step indicator
-        for widget in self.window.winfo_children():
-            if hasattr(widget, '_step_indicator'):
-                widget.destroy()
-        
-        step_frame = tk.Frame(self.window, bg='white', height=60)
-        step_frame.pack(fill='x', padx=30, pady=(20, 0))
-        step_frame.pack_propagate(False)
-        step_frame._step_indicator = True
-        
-        steps_container = tk.Frame(step_frame, bg='white')
-        steps_container.pack(expand=True, pady=15)
-        
-        steps = [
-            {"num": 1, "text": "สร้างเอกสาร"},
-            {"num": 2, "text": "ค้นหาลูกค้า"},
-            {"num": 3, "text": "เลือกใบแจ้งหนี้"},
-            {"num": 4, "text": "ตรวจสอบและยืนยัน"}
-        ]
-        
-        for i, step in enumerate(steps):
-            step_item = tk.Frame(steps_container, bg='white')
-            step_item.pack(side='left', padx=20)
-            
-            # Circle
-            if step["num"] <= self.current_step:
-                circle_bg = '#10b981'
-                circle_fg = 'white'
-                text_fg = '#1f2937'
-            else:
-                circle_bg = '#e5e7eb'
-                circle_fg = '#9ca3af'
-                text_fg = '#9ca3af'
-            
-            circle = tk.Frame(step_item, bg=circle_bg, width=35, height=35)
-            circle.pack()
-            circle.pack_propagate(False)
-            
-            tk.Label(circle, text=str(step["num"]), 
-                    font=('Segoe UI', 12, 'bold'),
-                    fg=circle_fg, bg=circle_bg).pack(expand=True)
-            
-            tk.Label(step_item, text=step["text"],
-                    font=('Segoe UI', 9),
-                    fg=text_fg, bg='white').pack(pady=(5, 0))
-            
-            # Arrow
-            if i < len(steps) - 1:
-                tk.Label(steps_container, text="→",
-                        font=('Segoe UI', 16),
-                        fg='#d1d5db', bg='white').pack(side='left', padx=(10, 0))
-                
+        import theme
+        steps = ["สร้างเอกสาร", "ค้นหาลูกค้า", "เลือกใบแจ้งหนี้", "ตรวจสอบและยืนยัน"]
+        theme.build_step_indicator(
+            self.window,
+            steps   = steps,
+            current = self.current_step,
+            accent  = theme.GREEN,
+        )
+
     def sync_selected_invoices(self):
         """ซิงค์ข้อมูลการเลือกให้เป็นปัจจุบัน"""
         if not hasattr(self, 'selected_invoice_numbers'):
@@ -234,7 +167,8 @@ class SalesBillUI:
             from SalesBill_History import SalesBillHistoryUI
             SalesBillHistoryUI(self.window, self.user_data)
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถเปิดหน้าประวัติได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถเปิดหน้าประวัติได้: {str(e)}",
+                parent=self.window)
             print(f"Error opening history: {str(e)}")
                 
     def show_step2(self):
@@ -322,14 +256,16 @@ class SalesBillUI:
             
             self.display_customers(customers)
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถค้นหาลูกค้าได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถค้นหาลูกค้าได้: {str(e)}",
+                parent=self.window)
             self.display_customers([])
             
     def select_from_tree(self):
         """เลือกลูกค้าจากตาราง"""
         selected_item = self.customer_tree.selection()
         if not selected_item:
-            messagebox.showwarning("คำเตือน", "กรุณาเลือกลูกค้าจากตาราง")
+            messagebox.showwarning("คำเตือน", "กรุณาเลือกลูกค้าจากตาราง",
+                parent=self.window)
             return
         
         # Get selected data
@@ -355,7 +291,8 @@ class SalesBillUI:
         if not customer_display_name:
             customer_display_name = f"ลูกค้า ID: {customer.get('CustomerId', 'N/A')}"
             
-        messagebox.showinfo("สำเร็จ", f"เลือกลูกค้า: {customer_display_name}")
+        messagebox.showinfo("สำเร็จ", f"เลือกลูกค้า: {customer_display_name}",
+            parent=self.window)
         self.show_step3()
         
     def select_customer(self, customer):
@@ -542,7 +479,8 @@ class SalesBillUI:
             
         except Exception as e:
             print(f"❌ ข้อผิดพลาดในการโหลดข้อมูล: {str(e)}")
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถโหลดข้อมูลได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถโหลดข้อมูลได้: {str(e)}",
+                parent=self.window)
 
     def on_customer_select(self, event):
         """เมื่อ double-click ในตาราง"""
@@ -552,7 +490,8 @@ class SalesBillUI:
         """เลือกลูกค้าจากตาราง"""
         selected_item = self.customer_tree.selection()
         if not selected_item:
-            messagebox.showwarning("คำเตือน", "กรุณาเลือกลูกค้าจากตาราง")
+            messagebox.showwarning("คำเตือน", "กรุณาเลือกลูกค้าจากตาราง",
+                parent=self.window)
             return
         
         # Get selected data
@@ -578,7 +517,8 @@ class SalesBillUI:
         if not customer_display_name:
             customer_display_name = f"ลูกค้า ID: {customer.get('CustomerId', 'N/A')}"
             
-        messagebox.showinfo("สำเร็จ", f"เลือกลูกค้า: {customer_display_name}")
+        messagebox.showinfo("สำเร็จ", f"เลือกลูกค้า: {customer_display_name}",
+            parent=self.window)
         self.show_step3()
     
     def show_step3(self):
@@ -618,7 +558,8 @@ class SalesBillUI:
             self.display_invoices(invoices)
         except Exception as e:
             print(f"Error loading invoices: {str(e)}")
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถโหลดใบแจ้งหนี้ได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถโหลดใบแจ้งหนี้ได้: {str(e)}",
+                parent=self.window)
                 
     def display_invoices(self, invoices):
         # Find the card widget
@@ -1166,6 +1107,7 @@ class SalesBillUI:
             customer_id = self.selected_customer.get('CustomerId')
             return self.db.get_customer_detail(customer_id)
         except Exception as e:
+            
             print(f"Error getting customer detail: {str(e)}")
             return {}
                         
@@ -1284,9 +1226,11 @@ class SalesBillUI:
             BillingNoteGenerator.Preview_Template_With_Data(template_data, 'sales')
             
         except ImportError as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่พบ BillingNoteGenerator: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่พบ BillingNoteGenerator: {str(e)}",
+                parent=self.window)
         except Exception as e:
-            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถแสดงตัวอย่างใบวางบิลได้: {str(e)}")
+            messagebox.showerror("ข้อผิดพลาด", f"ไม่สามารถแสดงตัวอย่างใบวางบิลได้: {str(e)}",
+                parent=self.window)
             print(f"Error showing template: {str(e)}")
 
     def prepare_template_data(self, billing_doc_no, customer_id, invoice_numbers):

@@ -264,6 +264,65 @@ class TableManager:
                 else:
                     results.append("✅ คอลัมน์ DiscountAmount และ NetTotal - มีอยู่แล้ว")
             
+            cursor.execute("""
+                SELECT COUNT(*) 
+                FROM INFORMATION_SCHEMA.TABLES 
+                WHERE TABLE_NAME = 'BranchBillingDocument'
+            """)
+            
+            if cursor.fetchone()[0] > 0:
+                cursor.execute("""
+                    SELECT COUNT(*) 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = 'BranchBillingDocument' 
+                    AND COLUMN_NAME = 'DiscountAmount'
+                """)
+                has_discount_branch = cursor.fetchone()[0] > 0
+                
+                cursor.execute("""
+                    SELECT COUNT(*) 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = 'BranchBillingDocument' 
+                    AND COLUMN_NAME = 'NetTotal'
+                """)
+                has_nettotal_branch = cursor.fetchone()[0] > 0
+                
+                if not has_discount_branch or not has_nettotal_branch:
+                    try:
+                        if not has_discount_branch and not has_nettotal_branch:
+                            cursor.execute("""
+                                ALTER TABLE [dbo].[BranchBillingDocument]
+                                ADD [DiscountAmount] DECIMAL(18, 2) NULL DEFAULT 0.00,
+                                    [NetTotal] DECIMAL(18, 2) NULL
+                            """)
+                            results.append("✨ BranchBillingDocument: เพิ่มคอลัมน์ DiscountAmount และ NetTotal สำเร็จ")
+                        elif not has_discount_branch:
+                            cursor.execute("""
+                                ALTER TABLE [dbo].[BranchBillingDocument]
+                                ADD [DiscountAmount] DECIMAL(18, 2) NULL DEFAULT 0.00
+                            """)
+                            results.append("✨ BranchBillingDocument: เพิ่มคอลัมน์ DiscountAmount สำเร็จ")
+                        elif not has_nettotal_branch:
+                            cursor.execute("""
+                                ALTER TABLE [dbo].[BranchBillingDocument]
+                                ADD [NetTotal] DECIMAL(18, 2) NULL
+                            """)
+                            results.append("✨ BranchBillingDocument: เพิ่มคอลัมน์ NetTotal สำเร็จ")
+                        
+                        cursor.execute("""
+                            UPDATE [dbo].[BranchBillingDocument]
+                            SET 
+                                DiscountAmount = ISNULL(DiscountAmount, 0.00),
+                                NetTotal = ISNULL(NetTotal, TotalAmount - ISNULL(DiscountAmount, 0))
+                            WHERE DiscountAmount IS NULL OR NetTotal IS NULL
+                        """)
+                        results.append("📝 BranchBillingDocument: อัพเดทข้อมูลเดิมเรียบร้อย")
+                        
+                    except Exception as e:
+                        results.append(f"❌ BranchBillingDocument: ไม่สามารถเพิ่มคอลัมน์: {str(e)}")
+                else:
+                    results.append("✅ BranchBillingDocument: คอลัมน์ DiscountAmount และ NetTotal - มีอยู่แล้ว")
+            
             conn.commit()
             cursor.close()
             conn.close()
