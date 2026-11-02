@@ -1,0 +1,110 @@
+name: Release
+
+# push tag เช่น v1.5.0 -> build BillingProgram.exe บน Windows -> สร้าง GitHub Release พร้อมไฟล์ zip
+# push สาขา claude/** -> อ่านเลขเวอร์ชันจาก title ใน main.py (เช่น v1.5 -> v1.5.0)
+#   ถ้ายังไม่มี tag นี้ จะสร้าง tag + Release ให้, ถ้ามีแล้วจะ build อย่างเดียว
+on:
+  push:
+    tags:
+      - "v*"
+    branches:
+      - "claude/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version
+        shell: bash
+        run: |
+          short="$(grep -oE 'โปรแกรมออกใบวางบิล v[0-9]+\.[0-9]+' main.py | grep -oE 'v[0-9.]+' | head -1)"
+          if [ -z "$short" ]; then
+            echo "::error::ไม่พบเลขเวอร์ชันใน title ของ main.py"
+            exit 1
+          fi
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            # tag v1.5.0 -> ต้องมี "v1.5" ใน title ของ main.py
+            version="${GITHUB_REF_NAME}"
+            if [ "$(echo "$version" | cut -d. -f1-2)" != "$short" ]; then
+              echo "::error::main.py title ($short) ไม่ตรงกับ tag $version"
+              exit 1
+            fi
+            release=true
+          else
+            version="${short}.0"
+            if git ls-remote --exit-code --tags origin "refs/tags/${version}" > /dev/null; then
+              echo "มี tag ${version} แล้ว - build อย่างเดียว"
+              release=false
+            else
+              release=true
+            fi
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "RELEASE=$release" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Compile check
+        run: python -m compileall -q .
+
+      - name: Build exe
+        run: pyinstaller BillingProgram.spec --noconfirm --clean
+
+      - name: Package
+        shell: pwsh
+        run: |
+          # ห้ามแนบ config.json (มีรหัสผ่านฐานข้อมูล)
+          if (Get-ChildItem dist/BillingProgram -Recurse -Filter config.json) {
+            throw "พบ config.json ใน dist - ยกเลิกการ release"
+          }
+          if ($env:RELEASE -eq "true") { $ver = $env:VERSION }
+          else { $ver = "build-" + "${{ github.sha }}".Substring(0, 7) }
+          $name = "BillingProgram-$ver.zip"
+          Compress-Archive -Path dist/BillingProgram/* -DestinationPath $name
+          echo "ZIP_NAME=$name" >> $env:GITHUB_ENV
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BillingProgram
+          path: ${{ env.ZIP_NAME }}
+
+      - name: Prepare release notes
+        if: env.RELEASE == 'true'
+        shell: bash
+        run: |
+          # ดึงหัวข้อของเวอร์ชันนี้จาก CHANGELOG.md (ตั้งแต่ "## v1.5.0" ถึงหัวข้อถัดไป)
+          awk -v v="## ${VERSION}" '$0==v{f=1;next} /^## /{f=0} f' CHANGELOG.md > release-notes.md
+          cat >> release-notes.md <<EOF
+
+          ### การติดตั้ง
+          1. ดาวน์โหลด \`BillingProgram-${VERSION}.zip\` แล้วแตกไฟล์
+          2. วางไฟล์ \`config.json\` (ของแต่ละเครื่อง) ไว้ข้าง \`BillingProgram.exe\`
+          3. ต้องติดตั้ง ODBC Driver 17 for SQL Server
+          EOF
+          sed -i 's/^          //' release-notes.md
+          cat release-notes.md
+
+      - name: Create GitHub Release
+        if: env.RELEASE == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: โปรแกรมออกใบวางบิล ${{ env.VERSION }}
+          files: ${{ env.ZIP_NAME }}
+          generate_release_notes: true
+          # รายการ "มีอะไรใหม่" ของแต่ละเวอร์ชันเขียนไว้ใน CHANGELOG.md
+          body_path: release-notes.md

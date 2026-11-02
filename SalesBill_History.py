@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime, timedelta
+import html
+import re
 from SalesBill_database import SalesBillDatabase
 from tkcalendar import DateEntry
 from utils import set_window_icon
@@ -636,6 +638,11 @@ class SalesBillHistoryUI:
         # แปลงตัวเลขเป็นภาษาไทย (ใช้ยอดสุทธิ)
         thai_baht_text = self.number_to_thai(net_total)
 
+        # หมายเหตุ - ข้ามข้อความอัตโนมัติ "ใบวางบิลจำนวน N รายการ" ของเอกสารเก่า
+        remark = (billing_detail.get('Notes') or '').strip()
+        if re.fullmatch(r'ใบวางบิลจำนวน \d+ รายการ', remark):
+            remark = ''
+
         # สร้างข้อมูลสำหรับ template
         template_data = {
             'DocumentTitle': 'ใบวางบิลขาย',
@@ -671,6 +678,7 @@ class SalesBillHistoryUI:
             'Discount': f"{discount_amount:,.2f}",          # ⭐ เพิ่ม
             'NetAmount': f"{net_total:,.2f}",               # ⭐ เพิ่ม
             'TextThaiBaht': thai_baht_text,                 # ⭐ แปลงจาก net_total
+            'Remark': html.escape(remark),
             
             # รายการเพิ่มเติม
             'additionalItems': additional_items
