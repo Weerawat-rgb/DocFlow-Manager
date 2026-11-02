@@ -1,10 +1,13 @@
 name: Release
 
 # push tag เช่น v1.5.0 -> build BillingProgram.exe บน Windows -> สร้าง GitHub Release พร้อมไฟล์ zip
+# push สาขา claude/** -> build อย่างเดียว (ดาวน์โหลด zip ได้จากหน้า Actions)
 on:
   push:
     tags:
       - "v*"
+    branches:
+      - "claude/**"
   workflow_dispatch:
 
 permissions:
@@ -48,7 +51,9 @@ jobs:
           if (Get-ChildItem dist/BillingProgram -Recurse -Filter config.json) {
             throw "พบ config.json ใน dist - ยกเลิกการ release"
           }
-          $name = "BillingProgram-${{ github.ref_name }}.zip"
+          if ("${{ github.ref_type }}" -eq "tag") { $ver = "${{ github.ref_name }}" }
+          else { $ver = "build-" + "${{ github.sha }}".Substring(0, 7) }
+          $name = "BillingProgram-$ver.zip"
           Compress-Archive -Path dist/BillingProgram/* -DestinationPath $name
           echo "ZIP_NAME=$name" >> $env:GITHUB_ENV
 
