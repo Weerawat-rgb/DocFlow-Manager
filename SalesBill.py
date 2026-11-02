@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
+import html
 from SalesBill_database import SalesBillDatabase
 from utils import set_window_icon
 
@@ -17,6 +18,7 @@ class SalesBillUI:
         self.selected_invoices = set()  
         self.selected_invoice_numbers = set() 
         self.discount_amount = 0.0
+        self.remark = ''
         
         self.setup_window()
         
@@ -1122,6 +1124,22 @@ class SalesBillUI:
                 font=('Segoe UI', 11),
                 fg='#6b7280', bg='white').pack(side='left')
 
+        # หมายเหตุ (แสดงในใบวางบิล)
+        remark_row = tk.Frame(summary_frame, bg='white')
+        remark_row.pack(fill='x', pady=5)
+        tk.Label(remark_row, text="หมายเหตุ:",
+                font=('Segoe UI', 11),
+                fg='#6b7280', bg='white').pack(side='left')
+
+        self.remark_var = tk.StringVar(value="")
+        remark_entry = tk.Entry(remark_row,
+                                textvariable=self.remark_var,
+                                font=('Segoe UI', 11),
+                                bg='#f9fafb',
+                                relief='solid',
+                                borderwidth=1)
+        remark_entry.pack(side='left', fill='x', expand=True, padx=(10, 0))
+
         # เส้นแบ่ง
         separator = tk.Frame(summary_frame, bg='#e5e7eb', height=1)
         separator.pack(fill='x', pady=10)
@@ -1242,12 +1260,16 @@ class SalesBillUI:
 
             print(f"🔍 Discount amount ที่จะบันทึก: {self.discount_amount}")  
 
+            # คอลัมน์ Notes รับได้ 500 ตัวอักษร
+            self.remark = self.remark_var.get().strip()[:500] if hasattr(self, 'remark_var') else ''
+
             billing_doc_no = self.db.create_billing_document(
                 customer_id=customer_id,
                 invoice_numbers=actual_invoice_numbers,
                 created_by=created_by,
                 user_id=user_id,
-                discount_amount=self.discount_amount  
+                discount_amount=self.discount_amount,
+                remark=self.remark
             )
             
             if billing_doc_no:
@@ -1407,6 +1429,7 @@ class SalesBillUI:
                     'Discount': f"{self.discount_amount:,.2f}",
                     'NetAmount': f"{net_amount:,.2f}",
                     'TextThaiBaht': thai_baht_text,  # ⭐ ใช้ค่าที่แปลงจาก net_amount แล้ว
+                    'Remark': html.escape(getattr(self, 'remark', '')),
                     
                     # รายการเพิ่มเติม
                     'additionalItems': additional_items

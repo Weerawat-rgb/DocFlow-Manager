@@ -335,7 +335,8 @@ class SalesBillDatabase:
             return f"DOC{now.strftime('%y%m')}001"
 
     def create_billing_document(self, customer_id: int, invoice_numbers: List[str], 
-                        created_by: str, user_id: str, discount_amount: float = 0.0) -> Optional[str]:
+                        created_by: str, user_id: str, discount_amount: float = 0.0,
+                        remark: str = '') -> Optional[str]:
         """สร้างเอกสารใบวางบิล"""
         try:
             cursor = self.connection.cursor()
@@ -427,7 +428,8 @@ class SalesBillDatabase:
             customer_name = customer_detail.get('Name', '')
             customer_address = customer_detail.get('full_address', '')
             customer_phone = customer_detail.get('PhoneMobile', '')
-            notes = f"ใบวางบิลจำนวน {len(invoice_details)} รายการ"
+            # Notes เก็บหมายเหตุที่ผู้ใช้กรอก (ไม่กรอก = ข้อความเดิม)
+            notes = remark or f"ใบวางบิลจำนวน {len(invoice_details)} รายการ"
             
             cursor.execute(insert_header, (
                 billing_doc_no, customer_id, customer_name, customer_address, 
