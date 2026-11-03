@@ -1,7 +1,7 @@
 name: Release
 
 # push tag เช่น v1.5.0 -> build BillingProgram.exe บน Windows -> สร้าง GitHub Release พร้อมไฟล์ zip
-# push สาขา claude/** -> อ่านเลขเวอร์ชันจาก title ใน main.py (เช่น v1.5 -> v1.5.0)
+# push สาขา claude/** -> อ่านเลขเวอร์ชันจาก title ใน main.py (เช่น v1.5 -> v1.5.0, v1.5.1 -> v1.5.1)
 #   ถ้ายังไม่มี tag นี้ จะสร้าง tag + Release ให้, ถ้ามีแล้วจะ build อย่างเดียว
 on:
   push:
@@ -23,21 +23,22 @@ jobs:
       - name: Determine version
         shell: bash
         run: |
-          short="$(grep -oE 'โปรแกรมออกใบวางบิล v[0-9]+\.[0-9]+' main.py | grep -oE 'v[0-9.]+' | head -1)"
-          if [ -z "$short" ]; then
+          title_ver="$(grep -oE 'โปรแกรมออกใบวางบิล v[0-9]+\.[0-9]+(\.[0-9]+)?' main.py | grep -oE 'v[0-9.]+' | head -1)"
+          if [ -z "$title_ver" ]; then
             echo "::error::ไม่พบเลขเวอร์ชันใน title ของ main.py"
             exit 1
           fi
+          # v1.5 -> v1.5.0
+          case "$title_ver" in v*.*.*) full="$title_ver" ;; *) full="${title_ver}.0" ;; esac
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            # tag v1.5.0 -> ต้องมี "v1.5" ใน title ของ main.py
             version="${GITHUB_REF_NAME}"
-            if [ "$(echo "$version" | cut -d. -f1-2)" != "$short" ]; then
-              echo "::error::main.py title ($short) ไม่ตรงกับ tag $version"
+            if [ "$version" != "$full" ]; then
+              echo "::error::main.py title ($title_ver) ไม่ตรงกับ tag $version"
               exit 1
             fi
             release=true
           else
-            version="${short}.0"
+            version="$full"
             if git ls-remote --exit-code --tags origin "refs/tags/${version}" > /dev/null; then
               echo "มี tag ${version} แล้ว - build อย่างเดียว"
               release=false

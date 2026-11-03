@@ -1012,7 +1012,11 @@ class SalesBillUI:
                 font=('Segoe UI', 12, 'bold'),
                 fg='#1f2937', bg='white').pack(anchor='w', pady=(0, 5))
         
-        # Table frame - ใช้พื้นที่เต็มที่
+        # ส่วนสรุปและปุ่ม - pack ก่อนตาราง เพื่อจองพื้นที่ด้านล่างไว้ ไม่ให้ถูกดันตกจอ
+        bottom_frame = tk.Frame(card, bg='white')
+        bottom_frame.pack(side='bottom', fill='x')
+
+        # Table frame - ใช้พื้นที่ที่เหลือ
         tree_frame = tk.Frame(card, bg='white')
         tree_frame.pack(fill='both', expand=True, pady=(0, 15))
         
@@ -1084,8 +1088,8 @@ class SalesBillUI:
                 ))
         
         # Summary section - ปรับให้มีส่วนลดและยอดสุทธิ
-        summary_frame = tk.Frame(card, bg='white', padx=20, pady=15, relief='solid', bd=1)
-        summary_frame.pack(fill='x', pady=(10, 15))
+        summary_frame = tk.Frame(bottom_frame, bg='white', padx=20, pady=15, relief='solid', bd=1)
+        summary_frame.pack(fill='x', pady=(0, 15))
 
         # ยอดรวม
         total_row = tk.Frame(summary_frame, bg='white')
@@ -1159,7 +1163,7 @@ class SalesBillUI:
         self.summary_net.pack(side='right')
         
         # Action buttons
-        action_frame = tk.Frame(card, bg='white')
+        action_frame = tk.Frame(bottom_frame, bg='white')
         action_frame.pack(fill='x')
         
         back_btn = tk.Button(action_frame, text="ย้อนกลับ",
